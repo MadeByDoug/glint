@@ -54,6 +54,13 @@ jobs:
       - name: Test (race + coverage)
         run: go test ./... -race -shuffle=on -coverpkg=./... -coverprofile=coverage.out -covermode=atomic
 
+      - name: Debug file and directory
+        run: |
+          echo "Current working directory:"
+          pwd
+          echo "Listing files:"
+          ls -lR
+
       - name: Govulncheck
         uses: golang/govulncheck-action@v1
 
