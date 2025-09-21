@@ -82,6 +82,9 @@ jobs:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Go (for cover tool)
         uses: actions/setup-go@v5
         with:
