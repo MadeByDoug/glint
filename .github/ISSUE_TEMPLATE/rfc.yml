@@ -7,6 +7,10 @@ body:
     attributes:
       value: |
         Please follow the naming convention. After creating this issue, create a branch named `YYYY-Mon.rfcN` and a file `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>-DRAFT.md` (slug is kebab-case).
+        
+        Draft Phases:
+        - Phase 1 — Use Case & Design Goals (problem, motivation, design goals)
+        - Phase 2 — Design Overview, Implementation & Test Plan (architecture and plan)
   - type: input
     id: rfc_id
     attributes:
@@ -65,17 +69,24 @@ body:
       placeholder: |
         - 2025-Sep-004
   - type: textarea
+    id: design_goals
+    attributes:
+      label: Design Goals (Phase 1)
+      description: Desired properties and constraints; leave detailed design to Phase 2
+    validations:
+      required: true
+  - type: textarea
     id: design
     attributes:
-      label: Design Overview
+      label: Design Overview (Phase 2)
   - type: textarea
     id: impl
     attributes:
-      label: Implementation Plan
+      label: Implementation Plan (Phase 2)
   - type: textarea
     id: tests
     attributes:
-      label: Test Plan
+      label: Test Plan (Phase 2)
   - type: checkboxes
     id: acceptance
     attributes:
@@ -84,4 +95,6 @@ body:
         - label: I will use the DRAFT suffix until accepted
           required: true
         - label: I will follow branch and filename conventions
+          required: true
+        - label: I will include `summary:` in the RFC front matter (≤ 140 chars)
           required: true

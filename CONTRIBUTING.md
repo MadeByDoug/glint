@@ -91,7 +91,7 @@ Conventions Summary
 - RFC file: `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>(-DRAFT).md`
 - RFC branch: `YYYY-Mon.rfcN`
 - Draft status: while the `-DRAFT` suffix is present
-- Commits: DCO sign-off required; PR titles follow Conventional Commits
+- Commits: DCO sign-off required on PRs targeting `main`; PR titles follow Conventional Commits
 
 Starter RFC (copy into `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>-DRAFT.md`)
 
@@ -134,7 +134,3 @@ Backwards Compatibility
 
 Breaking changes, migrations, and deprecations.
 
-DCO and Conventional Commits
-
-- DCO: each commit must include “Signed-off-by: Your Name <you@example.com>” (`git commit -s`).
-- Conventional Commits: PR titles start with `feat:`, `fix:`, `docs:`, `chore:`, etc.
