@@ -10,10 +10,19 @@ permissions:
 
 jobs:
   enable-automerge:
-    if: ${{ (vars.AUTOMERGE_RFC == 'true') && (startsWith(github.event.pull_request.base.ref, 'rfc/') || matches(github.event.pull_request.base.ref, '^\\d{4}-[A-Za-z]{3}\\.rfc\\d+$')) && !github.event.pull_request.draft }}
+    if: ${{ vars.AUTOMERGE_RFC == 'true' && !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
+      - name: Check branch name
+        id: branch_check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const baseRef = context.payload.pull_request.base.ref;
+            const isRfcBranch = baseRef.startsWith('rfc/') || /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(baseRef);
+            core.setOutput('is_rfc_branch', isRfcBranch);
       - name: Check for automerge label
+        if: steps.branch_check.outputs.is_rfc_branch == 'true'
         id: gate
         uses: actions/github-script@v7
         with:
@@ -23,7 +32,7 @@ jobs:
             core.setOutput('allowed', String(allowed));
 
       - name: Enable auto-merge (squash)
-        if: ${{ steps.gate.outputs.allowed == 'true' }}
+        if: steps.branch_check.outputs.is_rfc_branch == 'true' && steps.gate.outputs.allowed == 'true'
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
