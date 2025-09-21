@@ -10,7 +10,7 @@ How We Work
 
 Before You Start
 
-- Use Go 1.24+.
+- Use Go 1.22+.
 - Install tools used by CI checks:
   - golangci-lint: `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest`
   - govulncheck: `go install golang.org/x/vuln/cmd/govulncheck@latest`

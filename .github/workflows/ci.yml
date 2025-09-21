@@ -52,7 +52,11 @@ jobs:
           version: latest
 
       - name: Test (race + coverage)
-        run: go test ./... -race -shuffle=on -coverpkg=./... -coverprofile=coverage.out -covermode=atomic
+        run: |
+          set -euo pipefail
+          pkgs=$(go list ./...)
+          coverpkg=$(printf "%s\n" $pkgs | tr '\n' ',' | sed 's/,$//')
+          go test $pkgs -race -shuffle=on -coverpkg=$coverpkg -coverprofile=coverage.out -covermode=atomic
 
       - name: Govulncheck
         uses: golang/govulncheck-action@v1

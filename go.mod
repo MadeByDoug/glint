@@ -1,7 +1,9 @@
 // go.mod
 module github.com/MrBigCode/glint
 
-go 1.24
+go 1.23.0
+
+toolchain go1.24.6
 
 // The replace directive tells the Go toolchain that any import path starting
 // with "github.com/MrBigCode/glint" should be resolved from the local filesystem
