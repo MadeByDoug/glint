@@ -38,8 +38,8 @@ jobs:
 
             const index = [];
             const pathRegex = /^rfcs\/(\d{4})\/([A-Za-z]{3})\/(.+\.md)$/;
-            // New RFC filename pattern: YYYY-mon.rfc#(-DRAFT).md (month is lowercase)
-            const fileRegex = /^(\d{4})-([a-z]{3})\.rfc(\d+)(-DRAFT)?\.md$/;
+            // New RFC filename pattern with short slug: YYYY-mon.rfc#-short-slug(-DRAFT).md (month is lowercase)
+            const fileRegex = /^(\d{4})-([a-z]{3})\.rfc(\d+)-([a-z0-9][a-z0-9-]{1,50})(-DRAFT)?\.md$/;
 
             for (const br of rfcBranches) {
               try {
@@ -55,7 +55,8 @@ jobs:
                   const mm = base.match(fileRegex);
                   if (!mm) continue;
                   const id = `${mm[1]}-${mm[2]}.rfc${mm[3]}`; // YYYY-mon.rfc#
-                  const draft = !!mm[4];
+                  const slug = mm[4] || '';
+                  const draft = !!mm[5];
                   // Fetch file content
                   const res = await github.rest.repos.getContent({ owner, repo, ref: br, path: f.path });
                   const content = Buffer.from(res.data.content, 'base64').toString('utf8');
@@ -94,6 +95,8 @@ jobs:
                     path: f.path,
                     id,
                     title,
+                    slug,
+                    summary: typeof meta.summary === 'string' && meta.summary ? meta.summary : '',
                     status: draft ? 'draft' : 'proposed',
                     touched_paths: Array.isArray(meta.touched_paths) ? meta.touched_paths : [],
                     dependencies: Array.isArray(meta.dependencies) ? meta.dependencies : [],

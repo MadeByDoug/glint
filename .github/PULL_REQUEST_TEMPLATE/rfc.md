@@ -7,19 +7,19 @@ title: "docs(rfc): <short title>"
 Checklist (Draft phase)
 
 - [ ] This PR targets `main` and only changes a single DRAFT RFC markdown file.
-- [ ] RFC filename follows: `YYYY-mon.rfc#(-DRAFT).md` under `rfcs/YYYY/Mon/`.
+- [ ] RFC filename follows: `YYYY-mon.rfc#-<short-slug>(-DRAFT).md` under `rfcs/YYYY/Mon/` (slug is kebab-case).
 - [ ] RFC branch name is either `rfc/yyyy-mon-###` or `YYYY-Mon.rfcN`.
 - [ ] Status is clear (keep `-DRAFT` suffix until accepted).
-- [ ] (Optional) Front matter includes `touched_paths`, `dependencies`, `owners`.
+- [ ] Front matter includes `summary` (≤ 140 chars), and optionally `touched_paths`, `dependencies`, `owners`.
 
 Links
 
 - RFC ID: <!-- e.g., 2025-sep.rfc1 -->
 - Related Issues: <!-- #123 -->
 
-Summary
+Summary (≤ 140 chars)
 
-<!-- One paragraph summary of the proposal. -->
+<!-- One-line short description. Also add to front matter as `summary:`. -->
 
 Motivation
 

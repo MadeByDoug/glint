@@ -27,7 +27,9 @@ jobs:
 
             const pathRegex = /^rfcs\/(\d{4})\/([A-Za-z]{3})\/(.+\.md)$/;
             // New RFC filename pattern: YYYY-mon.rfc#(-DRAFT).md
-            const fileRegex = /^(\d{4})-([a-z]{3})\.rfc(\d+)(-DRAFT)?\.md$/;
+            // New RFC filename pattern with short slug: YYYY-mon.rfc#-short-slug(-DRAFT).md
+            // - month is lowercase, slug is kebab-case [a-z0-9-]
+            const fileRegex = /^(\d{4})-([a-z]{3})\.rfc(\d+)-([a-z0-9][a-z0-9-]{1,50})(-DRAFT)?\.md$/;
 
             const files = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: number, per_page: 100 });
             const changedAll = files.map(f => f.filename);
@@ -96,7 +98,7 @@ jobs:
               const fname = parts[parts.length - 1];
               const id = idFromFilename(fname);
               if (!id) {
-                core.error(`${p}: filename must match YYYY-Mon-###-short-desc(-DRAFT).md`);
+                core.error(`${p}: filename must match YYYY-mon.rfc#-short-slug(-DRAFT).md`);
                 failed = true;
                 continue;
               }
@@ -104,6 +106,15 @@ jobs:
               let content = '';
               try { content = fs.readFileSync(p, 'utf8'); } catch (_) {}
               const meta = parseFrontMatter(content);
+              // Require a short summary in front matter (<= 140 chars)
+              const summary = (meta.summary || '').trim();
+              if (!summary) {
+                core.error(`${p}: front matter must include 'summary: "<short description>"'`);
+                failed = true;
+              } else if (summary.length > 140) {
+                core.error(`${p}: 'summary' exceeds 140 characters (${summary.length})`);
+                failed = true;
+              }
               // Detect overlaps (best-effort)
               if (Array.isArray(meta.touched_paths) && meta.touched_paths.length && activeIndex.length) {
                 const overlaps = activeIndex.filter(r => r.id !== id && r.status !== 'done' && Array.isArray(r.touched_paths) && r.touched_paths.length).filter(r => {

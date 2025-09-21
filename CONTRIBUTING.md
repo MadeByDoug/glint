@@ -35,12 +35,13 @@ RFC Process (Human-Friendly)
 
 3) Write the draft RFC
 - Path: `rfcs/YYYY/Mon/`
-- Filename: `YYYY-mon.rfc#-DRAFT.md` (e.g., `2025-sep.rfc1-DRAFT.md`)
+- Filename: `YYYY-mon.rfc#-<short-slug>-DRAFT.md` (e.g., `2025-sep.rfc1-file-naming-checks-DRAFT.md`)
 - Keep `-DRAFT` while under discussion; remove it once accepted.
-- Optional front matter (YAML) at the top helps coordination:
+- Required front matter (YAML) at the top helps coordination and indexing:
   ---
   owners:
     - @your-handle
+  summary: "One‑line, human‑readable short description (≤ 140 chars)"
   touched_paths:
     - cmd/glint/**
     - internal/app/**
@@ -57,36 +58,40 @@ RFC Process (Human-Friendly)
 - Agents should use: `agent/<rfc-id>/<topic>` (e.g., `agent/2025-sep.rfc1/parser`).
 - Required checks for PRs to RFC branches:
   - Semantic PR title (Conventional Commits)
-  - DCO sign-offs on every commit (`git commit -s`)
   - Vet, lint, tests (with race), govulncheck pass
   - Coverage ≥ 60% total
-- Optional automerge for RFC PRs (maintainers): set repo var `AUTOMERGE_RFC=true` and label the PR `automerge` (or `agent:automerge`).
+  - DCO: not required on RFC branch PRs (docs and staging code)
+  - Optional automerge for RFC PRs (maintainers): set repo var `AUTOMERGE_RFC=true` and label the PR `automerge` (or `agent:automerge`).
 
 6) Keep the RFC branch current
 - When `main` changes, a workflow opens PRs to merge `main` into RFC branches. Resolve conflicts there.
 
 7) Merge to main when release-ready
 - Once the implementation and tests are complete, merge the RFC branch to `main`.
+- DCO enforcement: PRs targeting `main` must include DCO sign-offs. Either:
+  - All commits are signed (`git commit -s`), or
+  - Maintainer adds a `Signed-off-by: Name <email>` line to the PR description and performs a squash merge that includes the PR title/description in the final commit message.
 - Release Please prepares the changelog; tagging `vX.Y.Z` triggers GoReleaser to publish binaries.
 
 Cross-RFC Awareness
 
-- On pushes to `main`, `rfc/**`, and `**.rfc*` branches, a workflow rebuilds `rfcs/active-index.json` (on `main`) with all active RFCs.
+- On pushes to `main`, `rfc/**`, and `**.rfc*` branches, a workflow rebuilds `rfcs/active-index.json` (on `main`) with all active RFCs, including each RFC's `summary` from front matter and title.
 - RFC validation warns about potential overlaps (based on `touched_paths`) in PRs changing RFCs.
 
 Conventions Summary
 
 - RFC ID: `YYYY-mon.rfc#` (e.g., `2025-sep.rfc1`)
-- RFC file: `rfcs/YYYY/Mon/YYYY-mon.rfc#(-DRAFT).md`
+- RFC file: `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>(-DRAFT).md`
 - RFC branch: `rfc/yyyy-mon-###` or `YYYY-Mon.rfcN`
 - Draft status: while the `-DRAFT` suffix is present
 - Commits: DCO sign-off required; PR titles follow Conventional Commits
 
-Starter RFC (copy into `rfcs/YYYY/Mon/YYYY-mon.rfc#-DRAFT.md`)
+Starter RFC (copy into `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>-DRAFT.md`)
 
 ---
 owners:
   - @your-handle
+summary: "Short description in ≤ 140 chars"
 touched_paths:
   - cmd/glint/**
   - internal/app/**
@@ -126,4 +131,3 @@ DCO and Conventional Commits
 
 - DCO: each commit must include “Signed-off-by: Your Name <you@example.com>” (`git commit -s`).
 - Conventional Commits: PR titles start with `feat:`, `fix:`, `docs:`, `chore:`, etc.
-

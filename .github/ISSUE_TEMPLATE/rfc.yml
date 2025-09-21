@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please follow the naming convention. After creating this issue, create a branch named either `rfc/yyyy-mon-###` or `YYYY-Mon.rfcN` and a file `rfcs/YYYY/Mon/YYYY-mon.rfc#-DRAFT.md`.
+        Please follow the naming convention. After creating this issue, create a branch named either `rfc/yyyy-mon-###` or `YYYY-Mon.rfcN` and a file `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>-DRAFT.md` (slug is kebab-case).
   - type: input
     id: rfc_id
     attributes:
@@ -22,11 +22,19 @@ body:
       placeholder: Short, kebab-case friendly title
     validations:
       required: true
+  - type: input
+    id: short_summary
+    attributes:
+      label: Short Description (≤ 140 chars)
+      description: One-line summary that will appear in the RFC index
+      placeholder: e.g., Add file naming checks mirroring folder rules
+    validations:
+      required: true
   - type: textarea
     id: summary
     attributes:
       label: Summary
-      description: One-paragraph overview of the proposal
+      description: One-paragraph overview of the proposal (longer form)
     validations:
       required: true
   - type: textarea
