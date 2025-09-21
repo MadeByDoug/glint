@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: ${{ github.workspace }}/coverage.out
+          path: ./coverage.out
 
   coverage-gate:
     needs: build-test
