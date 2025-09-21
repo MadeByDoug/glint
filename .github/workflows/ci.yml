@@ -65,6 +65,8 @@ jobs:
 
       - name: Govulncheck
         uses: golang/govulncheck-action@v1
+        with:
+          repo-checkout: false
 
       - name: CLI smoke (optional)
         if: ${{ hashFiles('cmd/glint/**') != '' }}
