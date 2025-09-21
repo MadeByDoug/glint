@@ -1,0 +1,178 @@
+# .glint/config.yaml
+linter:
+  version: 1
+  rules:
+    - id: STRUCT-ROOT
+      selector:
+        kind: folder
+        path:
+          - "^[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^\\.git$"
+                - "^\\.glint$"
+                - "^cmd$"
+                - "^internal$"
+                - "^docs$"
+              disallow:
+                - ".*"
+              message: "Top-level directories must align with the glint layout."
+
+    - id: STRUCT-CMD
+      selector:
+        kind: folder
+        path:
+          - "^cmd/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^glint$"
+              disallow:
+                - ".*"
+              message: "Only the canonical 'glint' command is allowed under cmd/."
+
+    - id: STRUCT-INTERNAL
+      selector:
+        kind: folder
+        path:
+          - "^internal/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^app$"
+              disallow:
+                - ".*"
+              message: "internal/ should only contain the app layer."
+
+    - id: STRUCT-APP
+      selector:
+        kind: folder
+        path:
+          - "^internal/app/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^config$"
+                - "^infra$"
+                - "^lint$"
+                - "^runtime$"
+              disallow:
+                - ".*"
+              message: "internal/app/ must only contain config, infra, and lint packages."
+
+    - id: STRUCT-APP-CONFIG
+      selector:
+        kind: folder
+        path:
+          - "^internal/app/config/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^model$"
+              disallow:
+                - ".*"
+              message: "internal/app/config/ only exposes the model package."
+
+    - id: STRUCT-APP-INFRA
+      selector:
+        kind: folder
+        path:
+          - "^internal/app/infra/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^output$"
+              disallow:
+                - ".*"
+              message: "internal/app/infra/ only contains the output subsystem."
+
+    - id: STRUCT-INFRA-OUTPUT
+      selector:
+        kind: folder
+        path:
+          - "^internal/app/infra/output/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^log$"
+                - "^reporting$"
+              disallow:
+                - ".*"
+              message: "internal/app/infra/output/ exposes log and reporting packages only."
+
+    - id: STRUCT-LINT
+      selector:
+        kind: folder
+        path:
+          - "^internal/app/lint/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^checks$"
+                - "^fs$"
+                - "^parsers$"
+                - "^plan$"
+                - "^util$"
+              disallow:
+                - ".*"
+              message: "internal/app/lint/ must only include the canonical lint packages."
+
+    - id: STRUCT-LINT-CHECKS
+      selector:
+        kind: folder
+        path:
+          - "^internal/app/lint/checks/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^folder$"
+                - "^tests$"
+              disallow:
+                - ".*"
+              message: "internal/app/lint/checks/ only has folder and tests categories."
+
+    - id: STRUCT-LINT-CHECKS-TESTS
+      selector:
+        kind: folder
+        path:
+          - "^internal/app/lint/checks/tests/[^/]+$"
+      apply:
+        checks:
+          - type: folderName
+            params:
+              severity: error
+              allow:
+                - "^folder$"
+                - "^selector$"
+                - "^testutil$"
+              disallow:
+                - ".*"
+              message: "internal/app/lint/checks/tests/ contains folder, selector, and testutil helpers."

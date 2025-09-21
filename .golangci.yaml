@@ -1,0 +1,146 @@
+version: "2"
+
+linters:
+  enable:
+    - dupl
+    - gosec
+    - recvcheck
+    - revive
+    - staticcheck
+  settings:
+    dupl:
+      threshold: 150
+    recvcheck:
+      disable-builtin: true
+    revive:
+      severity: warning
+
+      # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md
+      rules:
+
+        - name: add-constant
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments:
+            - max-lit-count: "2"
+              allow-strs: '""'
+              allow-ints: "0,1,2"
+              allow-floats: "0.0,0.,1.0,1.,2.0,2."
+
+        - name: argument-limit
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments: [5]
+
+        - name: bool-literal-in-expr
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        # - name: banned-characters
+        #   severity: warning
+        #   disabled: false
+        #   exclude: [""]
+        #   arguments: []
+
+        - name: cognitive-complexity
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments: [7]
+
+        - name: comment-spacings
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments:
+            - mypragma
+            - otherpragma
+
+        - name: confusing-naming
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        - name: confusing-results
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        - name: constant-logical-expr
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        - name: context-as-argument
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments:
+            - allow-types-before: "*testing.T,*github.com/user/repo/testing.Harness"
+
+        # Branching complexity
+        - name: cyclomatic
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments: [8]
+
+        - name: datarace
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        - name: deep-exit
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        - name: defer
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments: [["call-chain", "loop", "method-call", "recover","immediate-recover", "return"]]
+
+        - name: early-return
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments:
+            - "preserve-scope"
+            - "allow-jump"
+
+        - name: empty-block
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        - name: empty-lines
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        - name: error-return
+          severity: warning
+          disabled: false
+          exclude: [""]
+                                                                                         
+        - name: error-strings
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments:
+            - "xerrors.New"
+
+        - name: errorf
+          severity: warning
+          disabled: false
+          exclude: [""]
+
+        - name: unhandled-error
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments: ["fmt.Printf", "myFunction"]
