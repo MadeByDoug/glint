@@ -1,0 +1,9 @@
+# Default: require owner review
+* @DougB-Code
+
+# RFC docs
+rfcs/** @DougB-Code
+
+# CI workflows
+.github/workflows/** @DougB-Code
+

@@ -154,10 +154,11 @@ linter:
               severity: error
               allow:
                 - "^folder$"
+                - "^file$"
                 - "^tests$"
               disallow:
                 - ".*"
-              message: "internal/app/lint/checks/ only has folder and tests categories."
+              message: "internal/app/lint/checks/ only has folder, file, and tests categories."
 
     - id: STRUCT-LINT-CHECKS-TESTS
       selector:
@@ -171,8 +172,9 @@ linter:
               severity: error
               allow:
                 - "^folder$"
+                - "^file$"
                 - "^selector$"
                 - "^testutil$"
               disallow:
                 - ".*"
-              message: "internal/app/lint/checks/tests/ contains folder, selector, and testutil helpers."
+              message: "internal/app/lint/checks/tests/ contains folder, file, selector, and testutil helpers."
