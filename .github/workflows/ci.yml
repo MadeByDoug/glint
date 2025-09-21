@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: '1.22.x'
+  GO_VERSION: '1.24.x'
   COVERAGE_MIN: '60'
 
 jobs:
@@ -69,9 +69,6 @@ jobs:
       - name: CLI smoke (optional)
         if: ${{ hashFiles('cmd/glint/**') != '' }}
         run: go run ./cmd/glint --help
-
-      - name: Verify file before upload
-        run: ls -l ${{ github.workspace }}/coverage.out
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
