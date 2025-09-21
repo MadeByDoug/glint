@@ -51,10 +51,23 @@ RFC Process (Human-Friendly)
   Draft phases
   - Phase 1 — Use Case & Design Goals
     - Complete: Summary, Motivation, Design Goals, Backwards Compatibility, Open Questions
+    - Approvals (DCO): Each reviewer adds an approval commit that appends their handle under “Approvals (Phase 1)” in the RFC file. The commit message must include a `Signed-off-by: Name <email>` trailer. These approval commits become part of history and serve as DCO for the phase.
     - Goal: Align on problem, scope, and desired properties.
   - Phase 2 — Design Overview, Implementation & Test Plan
     - Complete: Design Overview (architecture, alternatives, trade-offs), Implementation Plan (types/structs/functions, file locations, config changes), Test Plan (unit/e2e, coverage), Risks/Mitigations, Rollback Strategy
+    - Approvals (DCO): Same as Phase 1 — reviewers add approval commits with `Signed-off-by:` when the phase is ready to accept.
     - Goal: Align on concrete design and how it will be verified.
+
+  RFC approvals etiquette
+  - Approval commits should only edit the RFC “Approvals (Phase X)” lists — no content changes in the same commit.
+  - If substantive changes are made to a phase after approvals, set its Status back to “Pending” and clear the approvals list. Reviewers will re-approve with new approval commits.
+  - For RFC PRs to main, prefer “Rebase and merge” to preserve the individual approval commits in main’s history. For code PRs to main, continue to use “Squash and merge” with PR-body sign-off + `ready-to-squash` label as documented below.
+  - A non-blocking workflow validates approvals hygiene (approvals-only commits, status vs approvals) and raises warnings in the PR if issues are found.
+
+  Clean commit history for RFCs
+  - Iterate & refine: free-form commits on the RFC branch while evolving content.
+  - Clean up to a proposal: when the phase text is stable, perform a local squash/rebase to produce a focused content commit (e.g., `docs(rfc): phase 1 complete for 2025-sep.rfc1`). Apply label `ready-for-approvals`.
+  - DCO approvals: reviewers add dedicated approval commits (only editing the Approvals section) with their `Signed-off-by:` trailers. These appear in history after the proposal commit. Use “Rebase and merge” to preserve both the proposal commit and approval commits.
 
 4) Open a PR (RFC branch → main)
 - During draft, PRs should be docs-only changes to the RFC file. The bot labels these “rfc:doc-only”.
@@ -75,9 +88,13 @@ RFC Process (Human-Friendly)
 
 7) Merge to main when release-ready
 - Once the implementation and tests are complete, merge the RFC branch to `main`.
-- DCO enforcement for PRs targeting `main`:
+- DCO enforcement for PRs targeting `main` (code changes):
   - Preferred: all commits are signed (`git commit -s`).
   - Agent-heavy PRs: add a `Signed-off-by: Name <email>` line to the PR DESCRIPTION and apply the `ready-to-squash` label; maintainer uses Squash and merge including the PR title/description. The DCO workflow accepts this path.
+
+RFC approvals versus DCO on code:
+- RFC doc PRs: capture phase approvals via individual approval commits (with `Signed-off-by:`) that touch only the Approvals section; use “Rebase and merge” to preserve them.
+- Code PRs: continue using the DCO check to gate merges to `main` as described above.
 - Release Please prepares the changelog; tagging `vX.Y.Z` triggers GoReleaser to publish binaries.
 
 Cross-RFC Awareness
