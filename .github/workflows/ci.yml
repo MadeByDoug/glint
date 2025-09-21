@@ -54,9 +54,16 @@ jobs:
       - name: Test (race + coverage)
         run: |
           set -euo pipefail
-          pkgs=$(go list ./...)
-          coverpkg=$(printf "%s\n" $pkgs | tr '\n' ',' | sed 's/,$//')
-          go test $pkgs -race -shuffle=on -coverpkg=$coverpkg -coverprofile=coverage.out -covermode=atomic
+          readarray -t pkgs < <(go list ./...)
+          if [ "${#pkgs[@]}" -eq 0 ]; then
+            echo "go list returned no packages" >&2
+            exit 1
+          fi
+          coverpkg=$(IFS=,; echo "${pkgs[*]}")
+          coverdir=$(mktemp -d)
+          trap 'rm -rf "${coverdir}"' EXIT
+          GOCOVERDIR="${coverdir}" go test -race -shuffle=on -coverpkg="${coverpkg}" -covermode=atomic "${pkgs[@]}"
+          go tool covdata textfmt -i="${coverdir}" -o coverage.out
 
       - name: Govulncheck
         uses: golang/govulncheck-action@v1
