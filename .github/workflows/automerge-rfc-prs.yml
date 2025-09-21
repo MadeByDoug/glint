@@ -8,12 +8,9 @@ permissions:
   contents: read
   pull-requests: write
 
-env:
-  AUTOMERGE_RFC: ${{ vars.AUTOMERGE_RFC || 'false' }}
-
 jobs:
   enable-automerge:
-    if: ${{ env.AUTOMERGE_RFC == 'true' && (startsWith(github.event.pull_request.base.ref, 'rfc/') || matches(github.event.pull_request.base.ref, '^\\d{4}-[A-Za-z]{3}\\.rfc\\d+$')) && !github.event.pull_request.draft }}
+    if: ${{ (vars.AUTOMERGE_RFC == 'true') && (startsWith(github.event.pull_request.base.ref, 'rfc/') || matches(github.event.pull_request.base.ref, '^\\d{4}-[A-Za-z]{3}\\.rfc\\d+$')) && !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - name: Check for automerge label
