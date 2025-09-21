@@ -19,7 +19,7 @@ jobs:
         with:
           script: |
             const baseRef = context.payload.pull_request.base.ref;
-            const isRfcBranch = baseRef.startsWith('rfc/') || /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(baseRef);
+            const isRfcBranch = /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(baseRef);
             core.setOutput('is_rfc_branch', isRfcBranch);
       - name: Check for automerge label
         if: steps.branch_check.outputs.is_rfc_branch == 'true'

@@ -22,7 +22,7 @@ jobs:
           script: |
             const owner = context.repo.owner, repo = context.repo.repo;
             const branches = await github.paginate(github.rest.repos.listBranches, { owner, repo, per_page: 100 });
-            const rfc = branches.map(b=>b.name).filter(n => n.startsWith('rfc/') || /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(n));
+            const rfc = branches.map(b=>b.name).filter(n => /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(n));
             core.setOutput('branches', JSON.stringify(rfc));
 
   sync:
