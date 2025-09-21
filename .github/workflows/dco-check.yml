@@ -1,0 +1,52 @@
+name: dco-check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: read-all
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify DCO sign-offs
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_SHA='${{ github.event.pull_request.base.sha }}'
+          HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+          echo "Checking DCO for commits between $BASE_SHA..$HEAD_SHA"
+          # List commits in the PR range
+          mapfile -t COMMITS < <(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA")
+          if [[ ${#COMMITS[@]} -eq 0 ]]; then
+            echo "No commits found in range (unexpected)." >&2
+            exit 1
+          fi
+          fail=0
+          for c in "${COMMITS[@]}"; do
+            author_name=$(git log -1 --format=%an "$c")
+            author_email=$(git log -1 --format=%ae "$c")
+            body=$(git log -1 --format=%B "$c")
+            if ! grep -qiE '^Signed-off-by: .+ <.+@.+>$' <<<"$body"; then
+              echo "Commit $c by $author_name <$author_email> is missing Signed-off-by line" >&2
+              fail=1
+              continue
+            fi
+            # Ensure at least one sign-off matches the author email
+            if ! grep -qiE "^Signed-off-by: .* <${author_email//\./\\.}>$" <<<"$body"; then
+              echo "Commit $c: no Signed-off-by matches the author email $author_email" >&2
+              fail=1
+            fi
+          done
+          if [[ $fail -ne 0 ]]; then
+            echo "DCO check failed. Add 'Signed-off-by: Name <email>' to each commit (git commit -s)." >&2
+            exit 1
+          fi
+          echo "DCO check passed."
+

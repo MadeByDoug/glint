@@ -1,0 +1,79 @@
+name: RFC Proposal
+description: Propose a new RFC for Glint
+title: "RFC: <YYYY-Mon-###> <short title>"
+labels: ["rfc"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please follow the naming convention. After creating this issue, create a branch named either `rfc/yyyy-mon-###` or `YYYY-Mon.rfcN` and a file `rfcs/YYYY/Mon/YYYY-mon.rfc#-DRAFT.md`.
+  - type: input
+    id: rfc_id
+    attributes:
+      label: RFC ID
+      description: "Format: YYYY-mon.rfc# (e.g., 2025-sep.rfc1)"
+      placeholder: 2025-sep.rfc1
+    validations:
+      required: true
+  - type: input
+    id: title
+    attributes:
+      label: Short Title
+      placeholder: Short, kebab-case friendly title
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One-paragraph overview of the proposal
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact Areas / Touched Paths
+      description: List globs or directories this RFC will affect
+      placeholder: |
+        - cmd/glint/**
+        - internal/app/**
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      placeholder: |
+        - 2025-Sep-002
+        - 2025-Oct-003
+  - type: textarea
+    id: conflicts
+    attributes:
+      label: Potential Conflicts
+      placeholder: |
+        - 2025-Sep-004
+  - type: textarea
+    id: design
+    attributes:
+      label: Design Overview
+  - type: textarea
+    id: impl
+    attributes:
+      label: Implementation Plan
+  - type: textarea
+    id: tests
+    attributes:
+      label: Test Plan
+  - type: checkboxes
+    id: acceptance
+    attributes:
+      label: Acceptance
+      options:
+        - label: I will use the DRAFT suffix until accepted
+          required: true
+        - label: I will follow branch and filename conventions
+          required: true

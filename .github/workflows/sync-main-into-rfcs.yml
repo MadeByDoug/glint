@@ -1,0 +1,62 @@
+name: sync-main-into-rfcs
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enumerate:
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.list.outputs.branches }}
+    steps:
+      - name: List RFC branches
+        id: list
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner, repo = context.repo.repo;
+            const branches = await github.paginate(github.rest.repos.listBranches, { owner, repo, per_page: 100 });
+            const rfc = branches.map(b=>b.name).filter(n => n.startsWith('rfc/') || /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(n));
+            core.setOutput('branches', JSON.stringify(rfc));
+
+  sync:
+    needs: enumerate
+    if: ${{ needs.enumerate.outputs.branches != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJson(needs.enumerate.outputs.branches) }}
+    steps:
+      - name: Checkout RFC branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ matrix.branch }}
+
+      - name: Merge origin/main into RFC branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          set +e
+          git merge --no-edit origin/main
+          echo $? > .merge-exit
+          set -e
+
+      - name: Open PR to update RFC branch
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: sync/main-into-${{ matrix.branch }}
+          base: ${{ matrix.branch }}
+          title: "chore: sync main into ${{ matrix.branch }}"
+          commit-message: "chore: sync main into ${{ matrix.branch }}"
+          body: |
+            Automated merge of latest `main` into `${{ matrix.branch }}`.
+            Resolve conflicts in this PR if present.

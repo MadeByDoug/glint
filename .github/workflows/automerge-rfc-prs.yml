@@ -1,0 +1,34 @@
+name: automerge-rfc-prs
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, synchronize, labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  AUTOMERGE_RFC: ${{ vars.AUTOMERGE_RFC || 'false' }}
+
+jobs:
+  enable-automerge:
+    if: ${{ env.AUTOMERGE_RFC == 'true' && (startsWith(github.event.pull_request.base.ref, 'rfc/') || matches(github.event.pull_request.base.ref, '^\\d{4}-[A-Za-z]{3}\\.rfc\\d+$')) && !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for automerge label
+        id: gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = (context.payload.pull_request.labels || []).map(l=>l.name);
+            const allowed = labels.includes('automerge') || labels.includes('agent:automerge');
+            core.setOutput('allowed', String(allowed));
+
+      - name: Enable auto-merge (squash)
+        if: ${{ steps.gate.outputs.allowed == 'true' }}
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: squash
