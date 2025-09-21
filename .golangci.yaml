@@ -142,4 +142,4 @@ linters-settings:
         severity: warning
         disabled: false
         exclude: [""]
-          arguments: ["fmt.Printf", "myFunction"]
+        arguments: ["fmt.Printf", "myFunction"]
