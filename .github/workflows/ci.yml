@@ -60,6 +60,8 @@ jobs:
           pwd
           echo "Listing files:"
           ls -lR
+          echo "Contents of coverage.out:"
+          cat coverage.out
 
       - name: Govulncheck
         uses: golang/govulncheck-action@v1
