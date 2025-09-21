@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - rfc/**
       - '**.rfc*'
   workflow_dispatch:
 
@@ -30,11 +29,11 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // List all branches and keep only RFC branches (legacy rfc/* or YYYY-Mon.rfcN)
+            // List all branches and keep only RFC branches (YYYY-Mon.rfcN)
             const branches = await github.paginate(github.rest.repos.listBranches, { owner, repo, per_page: 100 });
             const rfcBranches = branches
               .map(b => b.name)
-              .filter(n => n.startsWith('rfc/') || /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(n));
+              .filter(n => /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(n));
 
             const index = [];
             const pathRegex = /^rfcs\/(\d{4})\/([A-Za-z]{3})\/(.+\.md)$/;

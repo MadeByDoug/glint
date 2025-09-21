@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please follow the naming convention. After creating this issue, create a branch named either `rfc/yyyy-mon-###` or `YYYY-Mon.rfcN` and a file `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>-DRAFT.md` (slug is kebab-case).
+        Please follow the naming convention. After creating this issue, create a branch named `YYYY-Mon.rfcN` and a file `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>-DRAFT.md` (slug is kebab-case).
   - type: input
     id: rfc_id
     attributes:

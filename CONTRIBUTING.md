@@ -29,11 +29,10 @@ RFC Process (Human-Friendly)
 - Open a new issue using “RFC Proposal”.
 - Pick an ID with monthly rollover: `YYYY-mon.rfc#` (e.g., `2025-sep.rfc1`). `#` increments per month.
 
-2) Create the RFC branch (choose one)
-- Legacy (supported): `rfc/yyyy-mon-###` (lowercase month)
-- Monthly (recommended): `YYYY-Mon.rfcN` (e.g., `2025-Sep.rfc2`)
+2) Create the RFC branch
+- Use `YYYY-Mon.rfcN` (e.g., `2025-Sep.rfc2`)
 
-3) Write the draft RFC
+3) Write the draft RFC (two phases)
 - Path: `rfcs/YYYY/Mon/`
 - Filename: `YYYY-mon.rfc#-<short-slug>-DRAFT.md` (e.g., `2025-sep.rfc1-file-naming-checks-DRAFT.md`)
 - Keep `-DRAFT` while under discussion; remove it once accepted.
@@ -48,6 +47,14 @@ RFC Process (Human-Friendly)
   dependencies:
     - 2025-sep.rfc2
   ---
+
+  Draft phases
+  - Phase 1 — Use Case & Design Goals
+    - Complete: Summary, Motivation, Design Goals, Backwards Compatibility, Open Questions
+    - Goal: Align on problem, scope, and desired properties.
+  - Phase 2 — Design Overview, Implementation & Test Plan
+    - Complete: Design Overview (architecture, alternatives, trade-offs), Implementation Plan (types/structs/functions, file locations, config changes), Test Plan (unit/e2e, coverage), Risks/Mitigations, Rollback Strategy
+    - Goal: Align on concrete design and how it will be verified.
 
 4) Open a PR (RFC branch → main)
 - During draft, PRs should be docs-only changes to the RFC file. The bot labels these “rfc:doc-only”.
@@ -75,14 +82,14 @@ RFC Process (Human-Friendly)
 
 Cross-RFC Awareness
 
-- On pushes to `main`, `rfc/**`, and `**.rfc*` branches, a workflow rebuilds `rfcs/active-index.json` (on `main`) with all active RFCs, including each RFC's `summary` from front matter and title.
+- On pushes to `main` and `**.rfc*` branches, a workflow rebuilds `rfcs/active-index.json` (on `main`) with all active RFCs, including each RFC's `summary` from front matter and title.
 - RFC validation warns about potential overlaps (based on `touched_paths`) in PRs changing RFCs.
 
 Conventions Summary
 
 - RFC ID: `YYYY-mon.rfc#` (e.g., `2025-sep.rfc1`)
 - RFC file: `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>(-DRAFT).md`
-- RFC branch: `rfc/yyyy-mon-###` or `YYYY-Mon.rfcN`
+- RFC branch: `YYYY-Mon.rfcN`
 - Draft status: while the `-DRAFT` suffix is present
 - Commits: DCO sign-off required; PR titles follow Conventional Commits
 
@@ -108,9 +115,9 @@ Motivation
 
 Why this change is needed and what it solves.
 
-Design Overview
+Design Goals
 
-High-level architecture, alternatives considered, trade-offs.
+Desired properties and constraints; leave detailed design overview to phase 2.
 
 Implementation Plan
 

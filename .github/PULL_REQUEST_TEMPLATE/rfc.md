@@ -8,7 +8,7 @@ Checklist (Draft phase)
 
 - [ ] This PR targets `main` and only changes a single DRAFT RFC markdown file.
 - [ ] RFC filename follows: `YYYY-mon.rfc#-<short-slug>(-DRAFT).md` under `rfcs/YYYY/Mon/` (slug is kebab-case).
-- [ ] RFC branch name is either `rfc/yyyy-mon-###` or `YYYY-Mon.rfcN`.
+- [ ] RFC branch name is `YYYY-Mon.rfcN`.
 - [ ] Status is clear (keep `-DRAFT` suffix until accepted).
 - [ ] Front matter includes `summary` (≤ 140 chars), and optionally `touched_paths`, `dependencies`, `owners`.
 

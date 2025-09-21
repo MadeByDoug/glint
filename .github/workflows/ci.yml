@@ -2,10 +2,10 @@ name: ci
 
 on:
   pull_request:
-    branches: [ main, rfc/**, '**.rfc*' ]
+    branches: [ main, '**.rfc*' ]
     types: [ opened, synchronize, reopened, ready_for_review ]
   push:
-    branches: [ rfc/**, '**.rfc*' ]
+    branches: [ '**.rfc*' ]
 
 permissions: read-all
 
