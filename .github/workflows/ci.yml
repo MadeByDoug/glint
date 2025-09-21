@@ -51,7 +51,7 @@ jobs:
           version: v2.4.0
 
       - name: Test (race + coverage)
-        run: go test ./... -race -shuffle=on -coverprofile=coverage.out -covermode=atomic
+        run: go test ./... -race -shuffle=on -coverpkg=./... -coverprofile=coverage.out -covermode=atomic
 
       - name: Govulncheck
         uses: golang/govulncheck-action@v1
