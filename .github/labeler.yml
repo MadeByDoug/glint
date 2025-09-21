@@ -1,0 +1,12 @@
+ci:
+  - .github/workflows/**
+go:
+  - '**/*.go'
+docs:
+  - '**/*.md'
+  - '!rfcs/**/*.md'
+rfc:
+  - 'rfcs/**'
+security:
+  - '**/security/**'
+

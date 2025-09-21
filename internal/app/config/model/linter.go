@@ -138,7 +138,7 @@ type ChFolderName struct {
 	Allow      RegexList  `json:"allow,omitempty"      yaml:"allow,omitempty"      mapstructure:"allow,omitempty"`
 	Disallow   RegexList  `json:"disallow,omitempty"   yaml:"disallow,omitempty"   mapstructure:"disallow,omitempty"`
 
-	// legacy/optional constraints (kept for parity; still useful)
+    // optional constraints (kept for parity; still useful)
 	Prefix         *string `json:"prefix,omitempty"         yaml:"prefix,omitempty"`
 	Suffix         *string `json:"suffix,omitempty"         yaml:"suffix,omitempty"`
 	ProhibitPrefix *string `json:"prohibitPrefix,omitempty" yaml:"prohibitPrefix,omitempty"`
