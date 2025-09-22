@@ -1,17 +1,30 @@
 name: release
 
 on:
-  push:
-    branches: [ main ]
+  pull_request:
+    types: [closed]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   build-artifacts:
     name: Build release artifacts
     runs-on: ubuntu-latest
+    # Only run on:
+    #  - PR merged into main from an RFC branch (head ref contains ".rfc")
+    #  - Manual dispatch
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.base.ref == 'main' &&
+       contains(github.event.pull_request.head.ref, '.rfc'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
