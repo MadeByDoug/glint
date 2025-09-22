@@ -7,6 +7,4 @@ docs:
   - '!rfcs/**/*.md'
 rfc:
   - 'rfcs/**'
-security:
-  - '**/security/**'
 

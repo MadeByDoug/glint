@@ -22,7 +22,6 @@ Validation (run locally before PRs)
 Quality and Commits
 
 - PR titles follow Conventional Commits (feat:, fix:, docs:, chore:, etc.).
-- For PRs targeting `main`, add a DCO sign-off to the PR description (e.g., `Signed-off-by: Name <email>`).
 - CI requires vet, lint, tests (race), govulncheck, and ≥ 60% total coverage to pass.
 
 Code & Tests

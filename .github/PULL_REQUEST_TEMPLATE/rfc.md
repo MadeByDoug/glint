@@ -11,8 +11,7 @@ Checklist (Draft phase)
 - [ ] RFC branch name is `YYYY-Mon.rfcN`.
 - [ ] Status is clear (keep `-DRAFT` suffix until accepted).
 - [ ] Front matter includes `summary` (≤ 140 chars), and optionally `touched_paths`, `dependencies`, `owners`.
-- [ ] Administrative policies (DCO/CC): handled by CONTRIBUTING; no need to restate in RFCs.
-- [ ] For phase acceptance: reviewers will add approval commits with a `Signed-off-by:` line that only modify the “Approvals (Phase X)” list in the RFC.
+
 
 Links
 

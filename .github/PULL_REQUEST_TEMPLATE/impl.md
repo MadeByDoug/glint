@@ -8,9 +8,6 @@ Self-Review Checklist
 
 - [ ] Linked to RFC ID and section(s) implemented.
 - [ ] PR title follows Conventional Commits (e.g., `feat:`, `fix:`, `chore:`).
-- [ ] DCO:
-  - Prefer: every commit includes a DCO sign-off (`git commit -s`).
-  - If any commit lacks sign-off, add a `Signed-off-by: Name <email>` line to the PR DESCRIPTION and apply the `ready-to-squash` label (maintainer will squash-merge including the PR description).
 - [ ] Lint, vet, tests, vuln-check pass locally.
 - [ ] Coverage maintained or improved (target: 60%+ total).
 - [ ] Added/updated tests for new behavior.
