@@ -1,7 +1,7 @@
 // go.mod
 module github.com/MrBigCode/glint
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.6
 
@@ -11,7 +11,7 @@ toolchain go1.24.6
 // This prevents any network activity for your local module.
 replace github.com/MrBigCode/glint => .
 
-require golang.org/x/term v0.34.0
+require golang.org/x/term v0.35.0
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -29,5 +29,5 @@ require (
 	github.com/knadh/koanf/v2 v2.2.2
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 )
