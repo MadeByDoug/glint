@@ -125,3 +125,5 @@ glint --dir . \
 `--error-output` and `--log-output` accept filesystem paths; `glint` cleans and validates these to prevent escaping the intended directory.
 
 Environment variables prefixed with `GLINT_` mirror the configuration hierarchy. Double underscores (`__`) denote nested keys, and values are merged before CLI overrides are applied. CLI flags always win over environment variables, which themselves win over config files, allowing you to tweak behaviour without editing committed configuration.
+
+Change to test pipeline
