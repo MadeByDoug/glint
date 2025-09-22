@@ -1,0 +1,100 @@
+name: RFC Proposal
+description: Propose a new RFC for Glint
+title: "RFC: <YYYY-Mon-###> <short title>"
+labels: ["rfc"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please follow the naming convention. After creating this issue, create a branch named `YYYY-Mon.rfcN` and a file `rfcs/YYYY/Mon/YYYY-mon.rfc#-<short-slug>-DRAFT.md` (slug is kebab-case).
+        
+        Draft Phases:
+        - Phase 1 — Use Case & Design Goals (problem, motivation, design goals)
+        - Phase 2 — Design Overview, Implementation & Test Plan (architecture and plan)
+  - type: input
+    id: rfc_id
+    attributes:
+      label: RFC ID
+      description: "Format: YYYY-mon.rfc# (e.g., 2025-sep.rfc1)"
+      placeholder: 2025-sep.rfc1
+    validations:
+      required: true
+  - type: input
+    id: title
+    attributes:
+      label: Short Title
+      placeholder: Short, kebab-case friendly title
+    validations:
+      required: true
+  - type: input
+    id: short_summary
+    attributes:
+      label: Short Description (≤ 140 chars)
+      description: One-line summary that will appear in the RFC index
+      placeholder: e.g., Add file naming checks mirroring folder rules
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One-paragraph overview of the proposal (longer form)
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact Areas / Touched Paths
+      description: List globs or directories this RFC will affect
+      placeholder: |
+        - cmd/glint/**
+        - internal/app/**
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      placeholder: |
+        - 2025-Sep-002
+        - 2025-Oct-003
+  - type: textarea
+    id: conflicts
+    attributes:
+      label: Potential Conflicts
+      placeholder: |
+        - 2025-Sep-004
+  - type: textarea
+    id: design_goals
+    attributes:
+      label: Design Goals (Phase 1)
+      description: Desired properties and constraints; leave detailed design to Phase 2
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Design Overview (Phase 2)
+  - type: textarea
+    id: impl
+    attributes:
+      label: Implementation Plan (Phase 2)
+  - type: textarea
+    id: tests
+    attributes:
+      label: Test Plan (Phase 2)
+  - type: checkboxes
+    id: acceptance
+    attributes:
+      label: Acceptance
+      options:
+        - label: I will use the DRAFT suffix until accepted
+          required: true
+        - label: I will follow branch and filename conventions
+          required: true
+        - label: I will include `summary:` in the RFC front matter (≤ 140 chars)
+          required: true
