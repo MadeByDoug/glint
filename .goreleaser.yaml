@@ -10,7 +10,7 @@ builds:
     binary: glint
     env:
       - CGO_ENABLED=0
-    goos: [linux, darwin, windows]
+    goos: [linux, darwin, windows, freebsd]
     goarch: [amd64, arm64]
     flags:
       - -trimpath
@@ -38,4 +38,3 @@ changelog:
 
 release:
   prerelease: auto
-
