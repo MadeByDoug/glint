@@ -1,10 +1,15 @@
 ci:
-  - .github/workflows/**
-go:
-  - '**/*.go'
-docs:
-  - '**/*.md'
-  - '!rfcs/**/*.md'
-rfc:
-  - 'rfcs/**'
+  - changed-files:
+      - any-glob-to-any-file: ['.github/workflows/**']
 
+go:
+  - changed-files:
+      - any-glob-to-any-file: ['**/*.go']
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file: ['**/*.md', '!rfcs/**/*.md']
+
+rfc:
+  - changed-files:
+      - any-glob-to-any-file: ['rfcs/**']
