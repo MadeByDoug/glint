@@ -35,7 +35,7 @@ jobs:
         branch: ${{ fromJson(needs.enumerate.outputs.branches) }}
     steps:
       - name: Checkout RFC branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ matrix.branch }}
