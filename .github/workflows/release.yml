@@ -29,6 +29,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Checkout the merge commit so the tag and HEAD match
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.ref }}
 
       - name: Determine next tag (patch bump)
         id: tag
@@ -37,6 +39,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
           tag_prefix: v
+          # Ensure the tag is created on the merge commit
+          commit_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Setup Go
         uses: actions/setup-go@v5
