@@ -25,11 +25,13 @@ jobs:
     name: Detect changed paths
     runs-on: ubuntu-latest
     outputs:
-      code_changed: ${{ steps.filter.outputs.code }}
-      docs_or_rfc_only: ${{ steps.only.outputs.docs_only }}
+      code_changed: ${{ steps.compute.outputs.code_changed }}
+      docs_or_rfc_only: ${{ steps.compute.outputs.docs_only }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Paths filter
         id: filter
@@ -55,15 +57,60 @@ jobs:
               - 'rfcs/**'
               - '**/*.md'
 
-      - name: Compute docs-only flag
-        id: only
+      - name: Compute changed files and gates (robust)
+        id: compute
+        shell: bash
         run: |
-          # docs_only := docs_rfc_md changed AND code did NOT change
-          if [[ "${{ steps.filter.outputs.docs_rfc_md }}" == "true" && "${{ steps.filter.outputs.code }}" != "true" ]]; then
-            echo "docs_only=true" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          event="${{ github.event_name }}"
+          if [[ "$event" == "pull_request" || "$event" == "pull_request_target" ]]; then
+            base_sha='${{ github.event.pull_request.base.sha }}'
+            head_sha='${{ github.event.pull_request.head.sha }}'
+            # Ensure refs exist for diff (some runners need explicit fetch)
+            git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}" --depth=1 || true
+            git fetch --no-tags origin "${{ github.event.pull_request.head.ref }}" --depth=1 || true
+            range="$base_sha...$head_sha"
           else
-            echo "docs_only=false" >> $GITHUB_OUTPUT
+            before='${{ github.event.before }}'
+            after='${{ github.sha }}'
+            if [[ -z "$before" || "$before" == 0000000000000000000000000000000000000000 ]]; then
+              # New branch or unknown before; compare to first parent if present
+              if git rev-parse --verify -q HEAD^ >/dev/null; then
+                range="HEAD^...HEAD"
+              else
+                range="$after"
+              fi
+            else
+              range="$before...$after"
+            fi
           fi
+
+          files=$(git diff --name-only $range || true)
+          echo "Changed files:\n$files"
+
+          # Determine if any file is NOT docs/rfcs/markdown/ignore-list
+          # Treat these as docs-only:
+          #  - docs/**
+          #  - rfcs/**
+          #  - any *.md anywhere (including README.md)
+          #  - .gitignore, .gitattributes, LICENSE*
+          non_docs=$(echo "$files" | grep -E '.' | grep -Ev '^(docs/|rfcs/)|'"\\.md$"'|^\.gitignore$|^\.gitattributes$|^LICENSE' || true)
+
+          if [[ -z "$files" ]]; then
+            # No changes detected in range; default to not running build
+            code_changed=false
+            docs_only=true
+          elif [[ -z "$non_docs" ]]; then
+            code_changed=false
+            docs_only=true
+          else
+            code_changed=true
+            docs_only=false
+          fi
+
+          echo "code_changed=$code_changed" >> $GITHUB_OUTPUT
+          echo "docs_only=$docs_only" >> $GITHUB_OUTPUT
 
   # --- Build & test matrix (runs only when code changed OR in merge_queue) ---
   build-test:
