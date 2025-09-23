@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ main, '**.rfc*' ]
     types: [ opened, synchronize, reopened, ready_for_review ]
-  # This triggers CI on the merge queue's ephemeral test branches
+  # Run on GitHub's merge queue staging branches
   merge_group:
   push:
     branches: [ '**.rfc*' ]
@@ -60,7 +60,6 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.gate }}" = "on" ]; then
-            # Enable all preview features (RFC gates are named, but for CI we exercise "all")
             echo "CLI_PREVIEW=all" >> $GITHUB_ENV
           else
             echo "CLI_PREVIEW=" >> $GITHUB_ENV
@@ -88,10 +87,22 @@ jobs:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
-      - name: Download coverage artifacts
+      # IMPORTANT: checkout repo so `go tool cover -func` can resolve files referenced in coverage.out
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go (for cover tool)
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download coverage artifacts (both modes)
         uses: actions/download-artifact@v4
         with:
           path: coverage
+
       - name: Enforce coverage threshold (OFF mode is the gate)
         shell: bash
         run: |
