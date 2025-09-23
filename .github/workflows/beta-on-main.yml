@@ -1,0 +1,43 @@
+name: beta-on-main
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "beta-${{ github.sha }}"
+  cancel-in-progress: true
+
+jobs:
+  beta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+
+      - name: Build
+        run: |
+          go build -trimpath -ldflags "-s -w" -o dist/cli ./...
+
+      - name: SBOM (optional)
+        run: |
+          echo "TODO: generate SBOM (e.g., syft packages dir:.)" || true
+
+      - name: Create prerelease (beta)
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          tag_name: "beta-${{ github.run_id }}"
+          name: "Beta build ${{ github.run_id }}"
+          files: dist/cli

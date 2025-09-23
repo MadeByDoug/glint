@@ -40,17 +40,22 @@ jobs:
           fetch-depth: 0
           ref: ${{ matrix.branch }}
 
-      - name: Merge origin/main into RFC branch
+      - name: Merge origin/main into RFC branch (no-ff)
+        shell: bash
         run: |
+          set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
+          # Attempt merge; capture exit code
           set +e
-          git merge --no-edit origin/main
-          echo $? > .merge-exit
+          git merge --no-edit --no-ff origin/main
+          code=$?
           set -e
+          echo "$code" > .merge-exit
 
-      - name: Open PR to update RFC branch
+      - name: Create PR only if changes exist
+        if: ${{ hashFiles('**/*') != '' }}
         uses: peter-evans/create-pull-request@v6
         with:
           branch: sync/main-into-${{ matrix.branch }}
