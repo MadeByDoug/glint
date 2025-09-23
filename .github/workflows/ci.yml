@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ main, '**.rfc*' ]
     types: [ opened, synchronize, reopened, ready_for_review ]
-  # Run on GitHub's merge queue staging branches
+  # Run on GitHub's merge queue staging branches (can't reliably diff here, so we don't skip)
   merge_group:
   push:
     branches: [ '**.rfc*' ]
@@ -20,7 +20,55 @@ env:
   COVERAGE_MIN: '10'
 
 jobs:
+  # --- Lightweight gate: decide if code changed vs docs-only ---
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      code_changed: ${{ steps.filter.outputs.code }}
+      docs_or_rfc_only: ${{ steps.only.outputs.docs_only }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Paths filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          # NOTE: This action supports pull_request and push well.
+          # merge_group lacks a diff list; we will run full CI for merge_group.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            # Any non-docs (code) change?
+            code:
+              - '**/*'
+              - '!docs/**'
+              - '!rfc/**'
+              - '!**/*.md'
+              - '!.gitignore'
+              - '!.gitattributes'
+              - '!LICENSE*'
+              - '!README.md'
+            # Pure docs/RFC/markdown change?
+            docs_rfc_md:
+              - 'docs/**'
+              - 'rfc/**'
+              - '**/*.md'
+
+      - name: Compute docs-only flag
+        id: only
+        run: |
+          # docs_only := docs_rfc_md changed AND code did NOT change
+          if [[ "${{ steps.filter.outputs.docs_rfc_md }}" == "true" && "${{ steps.filter.outputs.code }}" != "true" ]]; then
+            echo "docs_only=true" >> $GITHUB_OUTPUT
+          else
+            echo "docs_only=false" >> $GITHUB_OUTPUT
+          fi
+
+  # --- Build & test matrix (runs only when code changed OR in merge_queue) ---
   build-test:
+    needs: changes
+    if: ${{ github.event_name == 'merge_group' || needs.changes.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -84,10 +132,11 @@ jobs:
           path: ${{ github.workspace }}/coverage.out
 
   coverage-gate:
-    needs: build-test
+    needs: [changes, build-test]
+    # Only run when build-test ran (i.e., code changed or merge_queue)
+    if: ${{ github.event_name == 'merge_group' || needs.changes.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      # IMPORTANT: checkout repo so `go tool cover -func` can resolve files referenced in coverage.out
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -116,3 +165,5 @@ jobs:
           pct=$(go tool cover -func="$file" | awk '/total:/ {gsub(/%/, "", $3); print $3}')
           echo "Total coverage (OFF mode): ${pct}%"
           awk -v p="$pct" -v m="${COVERAGE_MIN}" 'BEGIN { if (p+0 < m+0) { printf("Coverage %s%% is below %s%%\n", p, m); exit 1 } else { printf("Coverage OK: %s%% >= %s%%\n", p, m) } }'
+
+  # -
