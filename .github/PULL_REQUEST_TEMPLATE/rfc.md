@@ -1,43 +1,32 @@
----
-name: "RFC: Design & Plan"
-about: "Propose or update an RFC document"
-title: "docs(rfc): <short title>"
----
+<!-- Keep this PR template minimal. The RFC in rfc/ is the source of truth. -->
 
-Checklist (Draft phase)
+## RFC
+- File: `rfc/2025-sept.rfc1-feature-x.md`
 
-- [ ] This PR targets `main` and only changes a single DRAFT RFC markdown file.
-- [ ] RFC filename follows: `YYYY-mon.rfc#-<short-slug>(-DRAFT).md` under `rfcs/YYYY/Mon/` (slug is kebab-case).
-- [ ] RFC branch name is `YYYY-Mon.rfcN`.
-- [ ] Status is clear (keep `-DRAFT` suffix until accepted).
-- [ ] Front matter includes `summary` (≤ 140 chars), and optionally `touched_paths`, `dependencies`, `owners`.
+## Feature Gates
+- Primary gate: `2025-sept.rfc1`
+- Additional gates (if any): <!-- comma-separated -->
 
+## Scope & Impact
+- Area(s): <!-- e.g., parser, cli, http -->
+- Behavior with gates **OFF**: unchanged ✅
+- Behavior with gates **ON**: <!-- 1–2 lines of WHAT changes (not how) -->
 
-Links
+## Readiness Checklist
+- [ ] All code paths are **behind the gates** listed above
+- [ ] Default behavior (gates OFF) covered by tests and remains green
+- [ ] Gate-ON tests added (unit/integration as appropriate)
+- [ ] `go vet`, `golangci-lint`, `govulncheck` pass
+- [ ] Coverage ≥ threshold (OFF mode)
+- [ ] Functional test added for any bug fixed in this PR (if applicable)
+- [ ] Docs/help updated (only user-visible behavior)
 
-- RFC ID: <!-- e.g., 2025-sep.rfc1 -->
-- Related Issues: <!-- #123 -->
+## RFC State
+- [ ] Planning
+- [ ] Implementation
+- [ ] Beta
+- [ ] Release Candidate
+- [ ] Released
 
-Summary (≤ 140 chars)
-
-<!-- One-line short description. Also add to front matter as `summary:`. -->
-
-Motivation
-
-<!-- Why this change is needed. -->
-
-Design Overview
-
-<!-- High-level design with diagrams or pseudo as needed. -->
-
-Implementation Plan
-
-<!-- Phased plan; milestones, risks, rollbacks. -->
-
-Test Plan
-
-<!-- Unit, integration, e2e strategy; coverage areas. -->
-
-Backwards Compatibility
-
-<!-- Breaking changes and migration steps, if any. -->
+## Notes for Reviewers (optional)
+<!-- Routing hints, screenshots, perf notes, rollout plan, etc. -->
