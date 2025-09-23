@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [ main, '**.rfc*' ]
     types: [ opened, synchronize, reopened, ready_for_review ]
+  # This triggers CI on the merge queue's ephemeral test branches
+  merge_group:
   push:
     branches: [ '**.rfc*' ]
 
@@ -20,7 +22,10 @@ env:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        gate: [off, on]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,17 +56,18 @@ jobs:
         with:
           version: latest
 
+      - name: Set preview gate mode
+        shell: bash
+        run: |
+          if [ "${{ matrix.gate }}" = "on" ]; then
+            # Enable all preview features (RFC gates are named, but for CI we exercise "all")
+            echo "CLI_PREVIEW=all" >> $GITHUB_ENV
+          else
+            echo "CLI_PREVIEW=" >> $GITHUB_ENV
+          fi
+
       - name: Test (race + coverage)
         run: go test ./... -race -shuffle=on -coverpkg=./... -coverprofile=coverage.out -covermode=atomic
-
-      - name: Debug file and directory
-        run: |
-          echo "Current working directory:"
-          pwd
-          echo "Listing files:"
-          ls -lR
-          echo "Contents of coverage.out:"
-          cat ${{ github.workspace }}/coverage.out
 
       - name: Govulncheck
         uses: golang/govulncheck-action@v1
@@ -75,34 +81,27 @@ jobs:
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-${{ matrix.gate }}
           path: ${{ github.workspace }}/coverage.out
 
   coverage-gate:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go (for cover tool)
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Download coverage artifact
+      - name: Download coverage artifacts
         uses: actions/download-artifact@v4
         with:
-          name: coverage
-
-      - name: Enforce coverage threshold
+          path: coverage
+      - name: Enforce coverage threshold (OFF mode is the gate)
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! -f coverage.out ]]; then
-            echo "coverage.out not found" >&2
+          file="coverage/coverage-off/coverage.out"
+          if [[ ! -f "$file" ]]; then
+            echo "coverage.out (OFF mode) not found at $file" >&2
+            ls -lR coverage || true
             exit 1
           fi
-          pct=$(go tool cover -func=coverage.out | awk '/total:/ {gsub(/%/, "", $3); print $3}')
-          echo "Total coverage: ${pct}%"
+          pct=$(go tool cover -func="$file" | awk '/total:/ {gsub(/%/, "", $3); print $3}')
+          echo "Total coverage (OFF mode): ${pct}%"
           awk -v p="$pct" -v m="${COVERAGE_MIN}" 'BEGIN { if (p+0 < m+0) { printf("Coverage %s%% is below %s%%\n", p, m); exit 1 } else { printf("Coverage OK: %s%% >= %s%%\n", p, m) } }'

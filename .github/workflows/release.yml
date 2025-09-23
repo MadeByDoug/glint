@@ -14,22 +14,20 @@ concurrency:
 
 jobs:
   build-and-release:
-    name: Tag, build, and publish release
+    name: Tag, build, and publish GA release
     runs-on: ubuntu-latest
-    # Only run on:
-    #  - PR merged into main
-    #  - Manual dispatch
+    # Fire only when:
+    #  - A PR merged into main (train model), OR manual dispatch
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.merged == true &&
        github.event.pull_request.base.ref == 'main')
     steps:
-      - name: Checkout
+      - name: Checkout merge commit
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Checkout the merge commit so the tag and HEAD match
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.ref }}
 
       - name: Determine next tag (patch bump)
@@ -39,7 +37,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
           tag_prefix: v
-          # Ensure the tag is created on the merge commit
           commit_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Fetch all tags
@@ -56,7 +53,6 @@ jobs:
           version: latest
           args: release --clean
         env:
-          # Ensure GoReleaser uses the just-created tag/version
           GORELEASER_CURRENT_TAG: ${{ steps.tagger.outputs.new_tag }}
           GORELEASER_PREVIOUS_TAG: ${{ steps.tagger.outputs.previous_tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
