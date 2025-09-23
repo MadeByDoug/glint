@@ -43,7 +43,7 @@ jobs:
             code:
               - '**/*'
               - '!docs/**'
-              - '!rfc/**'
+              - '!rfcs/**'
               - '!**/*.md'
               - '!.gitignore'
               - '!.gitattributes'
@@ -52,7 +52,7 @@ jobs:
             # Pure docs/RFC/markdown change?
             docs_rfc_md:
               - 'docs/**'
-              - 'rfc/**'
+              - 'rfcs/**'
               - '**/*.md'
 
       - name: Compute docs-only flag
