@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 // ----------------------
@@ -64,8 +65,8 @@ const (
 )
 
 type Selector struct {
-	Kind SelectorKind `json:"kind" yaml:"kind" mapstructure:"kind"` // must be "folder"
-	Path RegexList    `json:"path" yaml:"path" mapstructure:"path"` // REQUIRED: regex
+	Kind SelectorKind      `json:"kind" yaml:"kind" mapstructure:"kind"` // must be "folder"
+	Path RegexList         `json:"path" yaml:"path" mapstructure:"path"` // REQUIRED: regex
 	Meta map[string]string `json:"meta,omitempty" yaml:"meta,omitempty" mapstructure:"meta,omitempty"`
 }
 
@@ -103,17 +104,37 @@ type Apply struct {
 
 // ApplyCheck is now a dynamic struct that can support any check type.
 type ApplyCheck struct {
-	Type   string          `json:"type"   yaml:"type"   mapstructure:"type"`
-	Params json.RawMessage `json:"params" yaml:"params" mapstructure:"params"`
+	Type   string
+	Params json.RawMessage
 }
 
 func (c *ApplyCheck) UnmarshalJSON(b []byte) error {
-	type plain ApplyCheck
-	var p plain
-	if err := strictDecode(b, &p); err != nil {
-		return err
+	type explicit struct {
+		Type   string          `json:"type"`
+		Params json.RawMessage `json:"params"`
 	}
-	*c = ApplyCheck(p)
+
+	var e explicit
+	if err := strictDecode(b, &e); err == nil && strings.TrimSpace(e.Type) != "" {
+		c.Type = e.Type
+		c.Params = e.Params
+		return nil
+	}
+
+	var m map[string]json.RawMessage
+	if err := strictDecode(b, &m); err != nil {
+		return fmt.Errorf("apply.checks item: expected object with either type/params or single key: %w", err)
+	}
+	if len(m) != 1 {
+		return fmt.Errorf("apply.checks item: expected exactly one check entry, found %d", len(m))
+	}
+	for k, v := range m {
+		if strings.TrimSpace(k) == "" {
+			return fmt.Errorf("apply.checks item: empty check name is not allowed")
+		}
+		c.Type = k
+		c.Params = v
+	}
 	return nil
 }
 
@@ -138,7 +159,7 @@ type ChFolderName struct {
 	Allow      RegexList  `json:"allow,omitempty"      yaml:"allow,omitempty"      mapstructure:"allow,omitempty"`
 	Disallow   RegexList  `json:"disallow,omitempty"   yaml:"disallow,omitempty"   mapstructure:"disallow,omitempty"`
 
-    // optional constraints (kept for parity; still useful)
+	// optional constraints (kept for parity; still useful)
 	Prefix         *string `json:"prefix,omitempty"         yaml:"prefix,omitempty"`
 	Suffix         *string `json:"suffix,omitempty"         yaml:"suffix,omitempty"`
 	ProhibitPrefix *string `json:"prohibitPrefix,omitempty" yaml:"prohibitPrefix,omitempty"`
@@ -156,6 +177,25 @@ func (j *ChFolderName) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*j = ChFolderName(p)
+	return nil
+}
+
+// ChMarkdownSchema defines the parameters for the markdown schema check.
+type ChMarkdownSchema struct {
+	Schema   string    `json:"schema" yaml:"schema" mapstructure:"schema"`
+	Severity *Severity `json:"severity,omitempty" yaml:"severity,omitempty"`
+}
+
+func (c *ChMarkdownSchema) UnmarshalJSON(b []byte) error {
+	type plain ChMarkdownSchema
+	var p plain
+	if err := strictDecode(b, &p); err != nil {
+		return err
+	}
+	if strings.TrimSpace(p.Schema) == "" {
+		return fmt.Errorf("field schema in markdownSchema params: required")
+	}
+	*c = ChMarkdownSchema(p)
 	return nil
 }
 

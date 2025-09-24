@@ -11,7 +11,12 @@ toolchain go1.24.6
 // This prevents any network activity for your local module.
 replace github.com/MrBigCode/glint => .
 
-require golang.org/x/term v0.34.0
+require (
+	github.com/yuin/goldmark v1.6.0
+	golang.org/x/term v0.34.0
+	golang.org/x/text v0.17.0
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

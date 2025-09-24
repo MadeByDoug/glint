@@ -30,6 +30,15 @@ func (b *B) Dir(name string, kids ...func(*B)) *B {
 	return b
 }
 
+// File adds a file node under the current cursor.
+func (b *B) File(name string) *B {
+	f := &lint.Node{Name: name, Kind: lint.File, Meta: map[string]any{}}
+	f.Parent = b.cur
+	b.cur.Children = append(b.cur.Children, f)
+	b.last = f
+	return b
+}
+
 // WithMeta adds metadata to the most recently created node.
 // This enables fluent chaining like `b.Dir("...").WithMeta(...)`.
 func (b *B) WithMeta(key string, value any) *B {
