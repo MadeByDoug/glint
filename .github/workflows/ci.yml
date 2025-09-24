@@ -89,24 +89,29 @@ jobs:
           files=$(git diff --name-only $range || true)
           echo "Changed files:\n$files"
 
+          filter_code='${{ steps.filter.outputs.code }}'
+          filter_docs='${{ steps.filter.outputs.docs_rfc_md }}'
+
           # Determine if any file is NOT docs/rfcs/markdown/ignore-list
-          # Treat these as docs-only:
-          #  - docs/**
-          #  - rfcs/**
-          #  - any *.md anywhere (including README.md)
-          #  - .gitignore, .gitattributes, LICENSE*
           non_docs=$(echo "$files" | grep -E '.' | grep -Ev '^(docs/|rfcs/)|'"\\.md$"'|^\.gitignore$|^\.gitattributes$|^LICENSE' || true)
 
-          if [[ -z "$files" ]]; then
-            # No changes detected in range; default to not running build
-            code_changed=false
-            docs_only=true
-          elif [[ -z "$non_docs" ]]; then
-            code_changed=false
-            docs_only=true
-          else
+          code_changed=false
+          docs_only=false
+
+          if [[ "$filter_code" == "true" ]]; then
             code_changed=true
-            docs_only=false
+          elif [[ -n "$non_docs" ]]; then
+            code_changed=true
+          fi
+
+          if [[ "$code_changed" == "false" ]]; then
+            if [[ "$filter_docs" == "true" && -z "$non_docs" && -n "$files" ]]; then
+              docs_only=true
+            fi
+          fi
+
+          if [[ -z "$files" ]]; then
+            docs_only=true
           fi
 
           echo "code_changed=$code_changed" >> $GITHUB_OUTPUT
