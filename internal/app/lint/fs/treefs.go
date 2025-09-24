@@ -17,10 +17,23 @@ type BuildOptions struct {
 
 // BuildTreeFromFS walks rootDir and constructs a lint.Tree according to options.
 func BuildTreeFromFS(rootDir string, opts BuildOptions) (*lint.Tree, error) {
-	root := &lint.Node{Name: "", Kind: lint.Dir, Meta: map[string]any{}}
+	rootAbs, err := filepath.Abs(rootDir)
+	if err != nil {
+		return nil, err
+	}
+
+	root := &lint.Node{
+		Name: "",
+		Kind: lint.Dir,
+		Meta: map[string]any{
+			"relPath": "",
+			"absPath": rootAbs,
+		},
+	}
+
 	index := map[string]*lint.Node{"": root}
 
-	if err := filepath.WalkDir(rootDir, buildWalker(rootDir, opts, index)); err != nil {
+	if err := filepath.WalkDir(rootAbs, buildWalker(rootAbs, opts, index)); err != nil {
 		return nil, err
 	}
 
@@ -29,12 +42,12 @@ func BuildTreeFromFS(rootDir string, opts BuildOptions) (*lint.Tree, error) {
 }
 
 func buildWalker(rootDir string, opts BuildOptions, index map[string]*lint.Node) func(string, fs.DirEntry, error) error {
-    return func(path string, entry fs.DirEntry, walkErr error) error {
-        if walkErr != nil {
-            return walkErr
-        }
+	return func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
 
-        rel, err := relativePath(rootDir, path)
+		rel, err := relativePath(rootDir, path)
 		if err != nil {
 			return err
 		}
@@ -43,7 +56,7 @@ func buildWalker(rootDir string, opts BuildOptions, index map[string]*lint.Node)
 			return nil
 		}
 
-		addNode(index, rel, entry)
+		addNode(index, rel, entry, rootDir)
 		return nil
 	}
 }
@@ -70,9 +83,10 @@ func relativePath(rootDir, path string) (string, error) {
 	return rel, nil
 }
 
-func addNode(index map[string]*lint.Node, rel string, entry fs.DirEntry) {
-	parent := ensureParent(index, parentKey(rel))
-	node := newTreeNode(rel, entry, parent)
+func addNode(index map[string]*lint.Node, rel string, entry fs.DirEntry, rootDir string) {
+	parent := ensureParent(index, parentKey(rel), rootDir)
+	abs := filepath.Join(rootDir, filepath.FromSlash(rel))
+	node := newTreeNode(rel, abs, entry, parent)
 	parent.Children = append(parent.Children, node)
 	index[rel] = node
 }
@@ -95,25 +109,36 @@ func parentKey(rel string) string {
 	return parent
 }
 
-func ensureParent(index map[string]*lint.Node, key string) *lint.Node {
+func ensureParent(index map[string]*lint.Node, key string, rootDir string) *lint.Node {
 	if parent, ok := index[key]; ok {
 		return parent
 	}
-	parent := &lint.Node{Name: "", Kind: lint.Dir}
+	abs := filepath.Join(rootDir, filepath.FromSlash(key))
+	parent := &lint.Node{
+		Name: "",
+		Kind: lint.Dir,
+		Meta: map[string]any{
+			"relPath": key,
+			"absPath": abs,
+		},
+	}
 	index[key] = parent
 	return parent
 }
 
-func newTreeNode(rel string, entry fs.DirEntry, parent *lint.Node) *lint.Node {
+func newTreeNode(rel string, abs string, entry fs.DirEntry, parent *lint.Node) *lint.Node {
 	kind := lint.File
 	if entry.IsDir() {
 		kind = lint.Dir
 	}
 
 	return &lint.Node{
-		Name:   strings.TrimPrefix(filepath.Base(rel), "/"),
-		Kind:   kind,
-		Meta:   map[string]any{},
+		Name: strings.TrimPrefix(filepath.Base(rel), "/"),
+		Kind: kind,
+		Meta: map[string]any{
+			"relPath": rel,
+			"absPath": abs,
+		},
 		Parent: parent,
 	}
 }

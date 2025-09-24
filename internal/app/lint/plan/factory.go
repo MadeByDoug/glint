@@ -8,6 +8,7 @@ import (
 	model "github.com/MrBigCode/glint/internal/app/config/model"
 	"github.com/MrBigCode/glint/internal/app/infra/output/reporting"
 	"github.com/MrBigCode/glint/internal/app/lint"
+	"github.com/MrBigCode/glint/internal/app/lint/checks/file"
 	"github.com/MrBigCode/glint/internal/app/lint/checks/folder"
 )
 
@@ -20,6 +21,7 @@ var registry = make(map[string]Constructor)
 func init() {
 	// Register all known checks here.
 	registry["folderName"] = newFolderNameCheck
+	registry["markdownSchema"] = newMarkdownSchemaCheck
 }
 
 // New creates a new Checker instance from the registry.
@@ -52,5 +54,23 @@ func newFolderNameCheck(ruleID string, severity reporting.Severity, params json.
 		},
 		ruleID,
 		mapSeverity(p.Severity), // Note: Severity can be defined on the check itself
+	), nil
+}
+
+func newMarkdownSchemaCheck(ruleID string, severity reporting.Severity, params json.RawMessage) (lint.Checker, error) {
+	var p model.ChMarkdownSchema
+	if err := json.Unmarshal(params, &p); err != nil {
+		return nil, fmt.Errorf("unmarshal markdownSchema params: %w", err)
+	}
+
+	sev := severity
+	if p.Severity != nil {
+		sev = mapSeverity(p.Severity)
+	}
+
+	return file.NewMarkdownSchemaCheck(
+		file.MarkdownSchemaConfig{SchemaPath: p.Schema},
+		ruleID,
+		sev,
 	), nil
 }

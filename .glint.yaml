@@ -15,8 +15,11 @@ linter:
               allow:
                 - "^\\.git$"
                 - "^\\.glint$"
+                - "^\\.github$"
                 - "^cmd$"
                 - "^internal$"
+                - "^rfcs$"
+                - "^schemas$"
                 - "^docs$"
               disallow:
                 - ".*"
@@ -50,9 +53,10 @@ linter:
               severity: error
               allow:
                 - "^app$"
+                - "^markdown$"
               disallow:
                 - ".*"
-              message: "internal/ should only contain the app layer."
+              message: "internal/ should only contain the app layer and shared markdown tooling."
 
     - id: STRUCT-APP
       selector:
@@ -178,3 +182,15 @@ linter:
               disallow:
                 - ".*"
               message: "internal/app/lint/checks/tests/ contains folder, file, selector, and testutil helpers."
+
+    - id: RFC-MARKDOWN-SCHEMA
+      selector:
+        kind: file
+        path:
+          - "^rfcs/.*\\.md$"
+      apply:
+        checks:
+          - type: markdownSchema
+            params:
+              severity: error
+              schema: schemas/rfc.schema.yaml

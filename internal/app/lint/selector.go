@@ -8,7 +8,10 @@ import (
 	"github.com/MrBigCode/glint/internal/app/infra/output/reporting"
 )
 
-const folderKind = "folder"
+const (
+	folderKind = "folder"
+	fileKind   = "file"
+)
 
 // Selector defines the criteria for targeting nodes in the linting tree.
 
@@ -49,6 +52,8 @@ func (s *Selector) matchesNodeKind(kind NodeKind) bool {
 	switch s.Kind {
 	case folderKind:
 		return kind == Dir
+	case fileKind:
+		return kind == File
 	default:
 		return false
 	}
@@ -58,6 +63,8 @@ func (s *Selector) matchesKindString(kind string) bool {
 	switch s.Kind {
 	case folderKind:
 		return kind == folderKind
+	case fileKind:
+		return kind == fileKind
 	default:
 		return false
 	}
