@@ -15,6 +15,11 @@ type BuildOptions struct {
 	IncludeFiles bool // when true, include files (default if not DirsOnly)
 }
 
+const (
+	metaKeyRelPath = "relPath"
+	metaKeyAbsPath = "absPath"
+)
+
 // BuildTreeFromFS walks rootDir and constructs a lint.Tree according to options.
 func BuildTreeFromFS(rootDir string, opts BuildOptions) (*lint.Tree, error) {
 	rootAbs, err := filepath.Abs(rootDir)
@@ -26,8 +31,8 @@ func BuildTreeFromFS(rootDir string, opts BuildOptions) (*lint.Tree, error) {
 		Name: "",
 		Kind: lint.Dir,
 		Meta: map[string]any{
-			"relPath": "",
-			"absPath": rootAbs,
+			metaKeyRelPath: "",
+			metaKeyAbsPath: rootAbs,
 		},
 	}
 
@@ -118,8 +123,8 @@ func ensureParent(index map[string]*lint.Node, key string, rootDir string) *lint
 		Name: "",
 		Kind: lint.Dir,
 		Meta: map[string]any{
-			"relPath": key,
-			"absPath": abs,
+			metaKeyRelPath: key,
+			metaKeyAbsPath: abs,
 		},
 	}
 	index[key] = parent
@@ -136,8 +141,8 @@ func newTreeNode(rel string, abs string, entry fs.DirEntry, parent *lint.Node) *
 		Name: strings.TrimPrefix(filepath.Base(rel), "/"),
 		Kind: kind,
 		Meta: map[string]any{
-			"relPath": rel,
-			"absPath": abs,
+			metaKeyRelPath: rel,
+			metaKeyAbsPath: abs,
 		},
 		Parent: parent,
 	}

@@ -45,8 +45,16 @@ func CollectSections(doc *Doc) []SectionBlock {
 		return nil
 	}
 
+	headings := collectHeadingNodes(doc.Root)
+	return buildSectionBlocks(headings)
+}
+
+func collectHeadingNodes(root ast.Node) []*ast.Heading {
+	if root == nil {
+		return nil
+	}
 	var headings []*ast.Heading
-	ast.Walk(doc.Root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+	walker := func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
@@ -54,19 +62,34 @@ func CollectSections(doc *Doc) []SectionBlock {
 			headings = append(headings, h)
 		}
 		return ast.WalkContinue, nil
-	})
+	}
+	if err := ast.Walk(root, walker); err != nil {
+		return nil
+	}
+	return headings
+}
 
+func buildSectionBlocks(headings []*ast.Heading) []SectionBlock {
+	if len(headings) == 0 {
+		return nil
+	}
 	blocks := make([]SectionBlock, 0, len(headings))
 	for _, h := range headings {
-		block := SectionBlock{Heading: h}
-		for n := h.NextSibling(); n != nil; n = n.NextSibling() {
-			if nh, ok := n.(*ast.Heading); ok && nh.Level <= h.Level {
-				break
-			}
-			block.Body = append(block.Body, n)
-		}
-		blocks = append(blocks, block)
+		blocks = append(blocks, buildBlockForHeading(h))
 	}
-
 	return blocks
+}
+
+func buildBlockForHeading(h *ast.Heading) SectionBlock {
+	block := SectionBlock{Heading: h}
+	if h == nil {
+		return block
+	}
+	for node := h.NextSibling(); node != nil; node = node.NextSibling() {
+		if nh, ok := node.(*ast.Heading); ok && nh.Level <= h.Level {
+			break
+		}
+		block.Body = append(block.Body, node)
+	}
+	return block
 }

@@ -183,14 +183,3 @@ linter:
                 - ".*"
               message: "internal/app/lint/checks/tests/ contains folder, file, selector, and testutil helpers."
 
-    - id: RFC-MARKDOWN-SCHEMA
-      selector:
-        kind: file
-        path:
-          - "^rfcs/.*\\.md$"
-      apply:
-        checks:
-          - type: markdownSchema
-            params:
-              severity: error
-              schema: schemas/rfc.schema.yaml

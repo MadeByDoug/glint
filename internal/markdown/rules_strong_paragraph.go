@@ -16,53 +16,47 @@ func (r *strongParagraphRule) Type() string { return "strong_paragraph" }
 
 func (r *strongParagraphRule) Validate(rc RuleContext, secName string, body []NodeCursor) ([]Diagnostic, []NodeCursor) {
 	if len(body) == 0 {
-		if r.required {
-			return []Diagnostic{{
-				Code:     "MD001",
-				Severity: severityError,
-				Section:  secName,
-				Message:  "expected a paragraph starting with strong text",
-				Line:     0,
-			}}, body
-		}
+		return r.missingParagraphDiag(secName, body)
+	}
+
+	idx, para := firstNodeOfKind(body, kindParagraph)
+	if para == nil {
+		return r.missingParagraphDiag(secName, body)
+	}
+
+	if ok := paragraphStartsWithStrong(para); ok {
+		return nil, body[idx+1:]
+	}
+
+	line := lineNumber(rc.Buf, para.Position())
+	diag := Diagnostic{
+		Code:     "MD002",
+		Severity: severityError,
+		Section:  secName,
+		Message:  "first paragraph must begin with bold text",
+		Line:     line,
+	}
+	return []Diagnostic{diag}, body
+}
+
+func (r *strongParagraphRule) missingParagraphDiag(secName string, body []NodeCursor) ([]Diagnostic, []NodeCursor) {
+	if !r.required {
 		return nil, body
 	}
-
-	for i, n := range body {
-		if n.Kind() != "paragraph" {
-			continue
-		}
-		children := n.Children()
-		if len(children) == 0 || children[0].Kind() != "strong" {
-			line := lineNumber(rc.Buf, n.Position())
-			if r.required {
-				return []Diagnostic{{
-					Code:     "MD002",
-					Severity: severityError,
-					Section:  secName,
-					Message:  "first paragraph must begin with bold text",
-					Line:     line,
-				}}, body
-			}
-			return []Diagnostic{{
-				Code:     "MD002",
-				Severity: severityError,
-				Section:  secName,
-				Message:  "first paragraph must begin with bold text",
-				Line:     line,
-			}}, body
-		}
-		return nil, body[i+1:]
+	diag := Diagnostic{
+		Code:     "MD001",
+		Severity: severityError,
+		Section:  secName,
+		Message:  "expected a paragraph starting with strong text",
+		Line:     0,
 	}
+	return []Diagnostic{diag}, body
+}
 
-	if r.required {
-		return []Diagnostic{{
-			Code:     "MD001",
-			Severity: severityError,
-			Section:  secName,
-			Message:  "expected a paragraph starting with strong text",
-			Line:     0,
-		}}, body
+func paragraphStartsWithStrong(n NodeCursor) bool {
+	if n == nil || n.Kind() != kindParagraph {
+		return false
 	}
-	return nil, body
+	children := n.Children()
+	return len(children) > 0 && children[0].Kind() == kindStrongText
 }

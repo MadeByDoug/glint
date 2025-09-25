@@ -25,6 +25,7 @@ func normalizer(mode string) Normalizer {
 
 // LoadSchema reads a schema YAML file from disk.
 func LoadSchema(path string) (*Schema, error) {
+	// #nosec G304 -- schema path originates from trusted configuration.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read schema: %w", err)

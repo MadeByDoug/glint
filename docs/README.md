@@ -1,6 +1,6 @@
 # glint: A Directory Naming Linter
 
-`glint` is a fast, configuration-driven linter for enforcing consistent naming conventions across your project's directories. It helps maintain a clean and predictable repository structure by ensuring directory names adhere to predefined rules. The CLI can output diagnostics as text or JSON, stream structured logs, and emit debug artifacts that inspect the derived configuration.
+`glint` is an exploration to evaluate agentic AI's development contributions when directed through a heavy planning phase. 
 
 ## Features
 

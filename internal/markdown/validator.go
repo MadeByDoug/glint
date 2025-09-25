@@ -45,27 +45,42 @@ func Validate(md []byte, compiled *CompiledSchema) Result {
 
 func validateSections(rc RuleContext, compiled *CompiledSchema, sections []SectionBlock, md []byte) []Diagnostic {
 	used := make([]bool, len(sections))
-	var diags []Diagnostic
+	matches, missing, orderingDiags := matchSchemaSections(rc, compiled, sections, used)
+	diags := append([]Diagnostic(nil), orderingDiags...)
 
-	lastIdx := -1
-	type matched struct {
-		section *CompiledSection
-		block   SectionBlock
-		idx     int
+	if !compiled.Schema.Document.AllowExtraSections {
+		diags = append(diags, extraSectionDiagnostics(rc, sections, used, md)...)
 	}
 
-	var matches []matched
-	missingSections := make([]Section, 0)
+	fulfilled, failures, ruleDiags := validateMatchedSections(rc, matches, md)
+	diags = append(diags, ruleDiags...)
+	diags = append(diags, dependencyDiagnostics(rc, matches, fulfilled, failures, md)...)
+	diags = append(diags, missingSectionDiagnostics(missing, fulfilled)...)
+
+	return diags
+}
+
+type matchedSection struct {
+	section *CompiledSection
+	block   SectionBlock
+	idx     int
+}
+
+func matchSchemaSections(rc RuleContext, compiled *CompiledSchema, sections []SectionBlock, used []bool) ([]matchedSection, []Section, []Diagnostic) {
+	lastIdx := -1
+	var diags []Diagnostic
+	var matches []matchedSection
+	var missing []Section
+
 	for i := range compiled.Sections {
 		compSec := &compiled.Sections[i]
 		sec := compSec.Section
 		idx, block, ok := findSectionBlock(rc, sections, used, sec.Heading)
 		if !ok {
-			missingSections = append(missingSections, sec)
+			missing = append(missing, sec)
 			continue
 		}
 		used[idx] = true
-
 		if compiled.Schema.Document.StrictOrder && idx <= lastIdx {
 			diags = append(diags, Diagnostic{
 				Code:     "MD101",
@@ -75,82 +90,86 @@ func validateSections(rc RuleContext, compiled *CompiledSchema, sections []Secti
 			})
 		}
 		lastIdx = idx
-		matches = append(matches, matched{section: compSec, block: block, idx: idx})
+		matches = append(matches, matchedSection{section: compSec, block: block, idx: idx})
 	}
 
-	if !compiled.Schema.Document.AllowExtraSections {
-		diags = append(diags, extraSectionDiagnostics(rc, sections, used, md)...)
-	}
+	return matches, missing, diags
+}
 
-	fulfilled := make(map[string]bool)
-	sectionHasErrors := make(map[string]bool)
+func validateMatchedSections(rc RuleContext, matches []matchedSection, md []byte) (fulfilled map[string]bool, failures map[string]bool, diags []Diagnostic) {
+	fulfilled = make(map[string]bool)
+	failures = make(map[string]bool)
 
 	for _, m := range matches {
-		body := wrapNodes(m.block.Body, md)
-		remaining := body
-		hasError := false
-		for _, rule := range m.section.Rules {
-			stepDiags, leftover := rule.Validate(rc, m.section.Section.Name, remaining)
-			if len(stepDiags) > 0 {
-				diags = append(diags, stepDiags...)
-				if !hasError {
-					for _, sd := range stepDiags {
-						if sd.Severity == severityError {
-							hasError = true
-							break
-						}
-					}
-				}
-			}
-			remaining = leftover
-		}
+		matchDiags, hasError := validateMatchedSection(rc, m, md)
 		if !hasError {
 			fulfilled[m.section.Section.Name] = true
 		}
-		sectionHasErrors[m.section.Section.Name] = hasError
+		failures[m.section.Section.Name] = hasError
+		diags = append(diags, matchDiags...)
 	}
 
-	// dependency checks
+	return fulfilled, failures, diags
+}
+
+func validateMatchedSection(rc RuleContext, m matchedSection, md []byte) ([]Diagnostic, bool) {
+	remaining := wrapNodes(m.block.Body, md)
+	var diags []Diagnostic
+	hasError := false
+
+	for _, rule := range m.section.Rules {
+		stepDiags, leftover := rule.Validate(rc, m.section.Section.Name, remaining)
+		diags = append(diags, stepDiags...)
+		if !hasError && containsError(stepDiags) {
+			hasError = true
+		}
+		remaining = leftover
+	}
+
+	return diags, hasError
+}
+
+func dependencyDiagnostics(rc RuleContext, matches []matchedSection, fulfilled, failures map[string]bool, md []byte) []Diagnostic {
+	var diags []Diagnostic
 	for _, m := range matches {
-		depends := m.section.Section.Requires
-		if len(depends) == 0 {
+		diags = append(diags, dependencyDiagnosticsForMatch(rc, m, fulfilled, failures, md)...)
+	}
+	return diags
+}
+
+func dependencyDiagnosticsForMatch(rc RuleContext, m matchedSection, fulfilled, failures map[string]bool, md []byte) []Diagnostic {
+	deps := m.section.Section.Requires
+	if len(deps) == 0 {
+		return nil
+	}
+	line := headerLine(md, m.block.Heading)
+	sectionName := m.section.Section.Name
+
+	var diags []Diagnostic
+	for _, req := range deps {
+		if fulfilled[req] {
 			continue
 		}
-		for _, req := range depends {
-			if fulfilled[req] {
-				continue
-			}
-			line := 0
-			if lines := m.block.Heading.Lines(); lines != nil && lines.Len() > 0 {
-				line = lineNumber(md, lines.At(0).Start)
-			}
-			msg := fmt.Sprintf("section %q requires %q to be satisfied", m.section.Section.Name, req)
-			if sectionHasErrors[req] {
-				msg = fmt.Sprintf("section %q requires %q to pass without errors", m.section.Section.Name, req)
-			}
-			diags = append(diags, Diagnostic{
-				Code:     "MD105",
-				Severity: severityError,
-				Section:  m.section.Section.Name,
-				Message:  msg,
-				Line:     line,
-			})
+		msg := fmt.Sprintf("section %q requires %q to be satisfied", sectionName, req)
+		if failures[req] {
+			msg = fmt.Sprintf("section %q requires %q to pass without errors", sectionName, req)
 		}
+		diags = append(diags, Diagnostic{
+			Code:     "MD105",
+			Severity: severityError,
+			Section:  sectionName,
+			Message:  msg,
+			Line:     line,
+		})
 	}
+	return diags
+}
 
-	for _, sec := range missingSections {
-		deps := sec.Requires
-		if len(deps) > 0 {
-			ready := true
-			for _, req := range deps {
-				if !fulfilled[req] {
-					ready = false
-					break
-				}
-			}
-			if !ready {
-				continue
-			}
+func missingSectionDiagnostics(missing []Section, fulfilled map[string]bool) []Diagnostic {
+	var diags []Diagnostic
+	for _, sec := range missing {
+		if !dependenciesMet(sec.Requires, fulfilled) {
+			continue
 		}
 		diags = append(diags, Diagnostic{
 			Code:     "MD100",
@@ -160,26 +179,57 @@ func validateSections(rc RuleContext, compiled *CompiledSchema, sections []Secti
 			Line:     0,
 		})
 	}
-
 	return diags
+}
+
+func dependenciesMet(deps []string, fulfilled map[string]bool) bool {
+	if len(deps) == 0 {
+		return true
+	}
+	for _, req := range deps {
+		if !fulfilled[req] {
+			return false
+		}
+	}
+	return true
+}
+
+func containsError(diags []Diagnostic) bool {
+	for _, d := range diags {
+		if d.Severity == severityError {
+			return true
+		}
+	}
+	return false
+}
+
+func headerLine(md []byte, heading *ast.Heading) int {
+	if heading == nil {
+		return 0
+	}
+	if lines := heading.Lines(); lines != nil && lines.Len() > 0 {
+		return lineNumber(md, lines.At(0).Start)
+	}
+	return 0
 }
 
 func findSectionBlock(rc RuleContext, sections []SectionBlock, used []bool, heading SectionHeading) (int, SectionBlock, bool) {
 	want := normalizeHeading(rc, heading.Text)
 	for i, block := range sections {
-		if used[i] {
+		if used[i] || !headingMatches(rc, block.Heading, heading.Level, want) {
 			continue
 		}
-		h := block.Heading
-		if h == nil || h.Level != heading.Level {
-			continue
-		}
-		got := normalizeHeading(rc, HeadingText(h, rc.Buf))
-		if headingsEqual(rc, want, got) {
-			return i, block, true
-		}
+		return i, block, true
 	}
 	return -1, SectionBlock{}, false
+}
+
+func headingMatches(rc RuleContext, h *ast.Heading, level int, want string) bool {
+	if h == nil || h.Level != level {
+		return false
+	}
+	got := normalizeHeading(rc, HeadingText(h, rc.Buf))
+	return headingsEqual(rc, want, got)
 }
 
 func normalizeHeading(rc RuleContext, s string) string {
@@ -202,24 +252,25 @@ func extraSectionDiagnostics(rc RuleContext, sections []SectionBlock, used []boo
 		if used[i] {
 			continue
 		}
-		h := block.Heading
-		if h == nil {
-			continue
-		}
-		name := HeadingText(h, md)
-		line := 0
-		if lines := h.Lines(); lines != nil && lines.Len() > 0 {
-			line = lineNumber(md, lines.At(0).Start)
-		}
-		diags = append(diags, Diagnostic{
-			Code:     "MD102",
-			Severity: severityError,
-			Section:  name,
-			Message:  fmt.Sprintf("unexpected extra section: %s", name),
-			Line:     line,
-		})
+		diags = append(diags, extraSectionDiagnostic(md, block))
 	}
 	return diags
+}
+
+func extraSectionDiagnostic(md []byte, block SectionBlock) Diagnostic {
+	h := block.Heading
+	if h == nil {
+		return Diagnostic{Code: "MD102", Severity: severityError, Message: "unexpected extra section"}
+	}
+	name := HeadingText(h, md)
+	line := headerLine(md, h)
+	return Diagnostic{
+		Code:     "MD102",
+		Severity: severityError,
+		Section:  name,
+		Message:  fmt.Sprintf("unexpected extra section: %s", name),
+		Line:     line,
+	}
 }
 
 func filterErrors(ds []Diagnostic) []Diagnostic {
@@ -261,7 +312,7 @@ func (c nodeCursor) Kind() string {
 
 func (c nodeCursor) Text() string {
 	var b strings.Builder
-	ast.Walk(c.node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+	walker := func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
@@ -269,7 +320,10 @@ func (c nodeCursor) Text() string {
 			b.Write(t.Segment.Value(c.buf))
 		}
 		return ast.WalkContinue, nil
-	})
+	}
+	if err := ast.Walk(c.node, walker); err != nil {
+		return ""
+	}
 	return strings.TrimSpace(b.String())
 }
 
