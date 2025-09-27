@@ -55,6 +55,9 @@ func enrichFileNode(n *Node, rootDir string) error {
 		return &fs.PathError{Op: "parse", Path: n.Path(), Err: err}
 	}
 
+	if n.Meta == nil {
+		n.Meta = make(map[string]any, len(meta))
+	}
 	for k, v := range meta {
 		n.Meta[k] = v
 	}
@@ -72,7 +75,7 @@ func EnrichTreeSelected(tree *Tree, rootDir string, fileSelectors []Selector) er
 
 func matchesAny(sels []Selector, rel string) bool {
 	for _, s := range sels {
-		if s.Kind == "file" && s.MatchesRelPath(rel, "file") {
+		if s.Kind == SelectorKindFile && s.MatchesRelPath(rel, SelectorKindFile) {
 			return true
 		}
 	}
@@ -124,6 +127,9 @@ func enrichSelectedFile(n *Node, rootDir string, selectors []Selector) error {
 		return &fs.PathError{Op: "parse", Path: n.Path(), Err: err}
 	}
 
+	if n.Meta == nil {
+		n.Meta = make(map[string]any, len(meta))
+	}
 	for k, v := range meta {
 		n.Meta[k] = v
 	}
@@ -132,17 +138,24 @@ func enrichSelectedFile(n *Node, rootDir string, selectors []Selector) error {
 }
 
 func resolveFilePath(rootDir, rel string) (string, error) {
+	original := rel
 	rootAbs, err := filepath.Abs(rootDir)
 	if err != nil {
 		return "", fmt.Errorf("resolve root %q: %w", rootDir, err)
 	}
 	rootAbs = filepath.Clean(rootAbs)
-	relClean := filepath.Clean(rel)
+
+	rel = strings.TrimLeft(rel, "/\\")
+	relPath := filepath.FromSlash(rel)
+	relClean := filepath.Clean(relPath)
+	if relClean == "." {
+		relClean = ""
+	}
 	fullPath := filepath.Join(rootAbs, relClean)
 	if fullPath != rootAbs {
 		prefix := rootAbs + string(os.PathSeparator)
 		if !strings.HasPrefix(fullPath, prefix) {
-			return "", fmt.Errorf("path %q escapes root %q", rel, rootDir)
+			return "", fmt.Errorf("path %q escapes root %q", original, rootDir)
 		}
 	}
 	return fullPath, nil

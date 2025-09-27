@@ -5,10 +5,10 @@ This page highlights agent-specific expectations. For the full workflow, read `C
 Agent Basics
 
 - Follow the RFC workflow in `CONTRIBUTING.md` before branching or opening PRs.
-- Use the RFC ID format `YYYY-mon.rfc#` (e.g., `2025-sep.rfc1`).
+- Use the RFC ID format `RFC-YYYY-###` (e.g., `RFC-2025-002`).
 - Implementation branches must be named `agent/<rfc-id>/<topic>` and target the RFC branch via PR.
-- Keep RFC files in `rfcs/YYYY/Mon/` and use the filename pattern `YYYY-mon.rfc#(-DRAFT).md`.
-- While an RFC is under discussion, keep the `-DRAFT` suffix in the filename.
+- Keep RFC files directly under `rfcs/` and use the filename pattern `RFC-YYYY-###-<short-slug>.md`.
+- While an RFC is under discussion, keep the metadata line `RFC Status: Draft` up to date.
 - Check `rfcs/active-index.json` on `main` to understand other active RFCs and avoid conflicts.
 
 Validation (run locally before PRs)

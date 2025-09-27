@@ -10,31 +10,22 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/MrBigCode/glint/internal/app/infra/output/level"
 )
 
 type ctxKey string
 
-type Level int
-
-const (
-	LevelOff Level = iota
-	LevelError
-	LevelInfo
-)
-
-func ParseLevel(s string) Level {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "off", "none", "":
-		return LevelOff
-	case "error":
-		return LevelError
-	case "info": // treat "debug" as info for now
-		return LevelInfo
-	case "debug":
-		return LevelInfo
-	default:
-		return LevelOff
+func ParseLevel(s string) level.Level {
+	trimmed := strings.TrimSpace(s)
+	if strings.EqualFold(trimmed, "debug") {
+		return level.Info
 	}
+	lvl, err := level.Parse(trimmed)
+	if err != nil {
+		return level.Warn
+	}
+	return lvl
 }
 
 // Logger provides structured logging with optional base fields and context.
@@ -43,16 +34,16 @@ type Logger struct {
 	writer     io.Writer
 	baseFields map[string]any
 	ctx        context.Context
-	level      Level
+	level      level.Level
 }
 
 func New(format string, writer io.Writer) *Logger {
-	return &Logger{format: format, writer: writer, level: LevelOff} // default off
+	return &Logger{format: format, writer: writer, level: level.Warn}
 }
 
-func (l *Logger) SetLevel(level Level) *Logger {
+func (l *Logger) SetLevel(lvl level.Level) *Logger {
 	cp := l.clone()
-	cp.level = level
+	cp.level = lvl
 	return cp
 }
 
@@ -74,14 +65,14 @@ func (l *Logger) WithContext(ctx context.Context) *Logger {
 }
 
 func (l *Logger) Info(message string) {
-	if l.level < LevelInfo {
+	if l.level != level.Info {
 		return
 	}
 	l.write("info", "", message)
 }
 
 func (l *Logger) Error(message string) {
-	if l.level < LevelError {
+	if level.Rank(l.level) < level.Rank(level.Warn) {
 		return
 	}
 	l.write("error", "", message)
@@ -107,8 +98,8 @@ func tryCopyString(ctx context.Context, key string, dst map[string]any) {
 	dst[key] = s
 }
 
-func (l *Logger) write(severity string, code string, message string) {
-	if l.writer == nil || l.level == LevelOff || l.writer == io.Discard {
+func (l *Logger) write(severity, code, message string) {
+	if l.writer == nil || l.writer == io.Discard {
 		return
 	}
 
@@ -136,7 +127,10 @@ func (l *Logger) writeJSON(severity, code, message string) error {
 	for k, v := range l.collectMeta() {
 		out[k] = v
 	}
-	return json.NewEncoder(l.writer).Encode(out)
+	if err := json.NewEncoder(l.writer).Encode(out); err != nil {
+		return fmt.Errorf("encode log entry: %w", err)
+	}
+	return nil
 }
 
 func (l *Logger) writeText(severity, code, message string) error {
@@ -146,15 +140,17 @@ func (l *Logger) writeText(severity, code, message string) error {
 	}
 
 	if _, err := fmt.Fprintf(l.writer, "%s: %s", header, message); err != nil {
-		return err
+		return fmt.Errorf("write log header: %w", err)
 	}
 
 	if err := l.writeTextMeta(l.collectMeta()); err != nil {
 		return err
 	}
 
-	_, err := fmt.Fprintln(l.writer)
-	return err
+	if _, err := fmt.Fprintln(l.writer); err != nil {
+		return fmt.Errorf("write log newline: %w", err)
+	}
+	return nil
 }
 
 func (l *Logger) writeTextMeta(meta map[string]any) error {
@@ -170,7 +166,7 @@ func (l *Logger) writeTextMeta(meta map[string]any) error {
 
 	for _, k := range keys {
 		if _, err := fmt.Fprintf(l.writer, " %s=%v", k, meta[k]); err != nil {
-			return err
+			return fmt.Errorf("write log meta %q: %w", k, err)
 		}
 	}
 	return nil

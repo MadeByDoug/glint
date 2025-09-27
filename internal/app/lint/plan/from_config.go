@@ -2,29 +2,35 @@
 package plan
 
 import (
+	"fmt"
 	"regexp"
-	"strings"
 
 	model "github.com/MrBigCode/glint/internal/app/config/model"
 	"github.com/MrBigCode/glint/internal/app/infra/output/reporting"
 	"github.com/MrBigCode/glint/internal/app/lint"
+	"github.com/MrBigCode/glint/internal/app/lint/util"
 )
 
 // FromConfig translates the linter config into a list of concrete checkers.
-func FromConfig(cfg model.ConfigSchemaJson) []lint.Checker {
+func FromConfig(cfg model.LinterConfig) ([]lint.Checker, error) {
 	var out []lint.Checker
 
-	for _, rule := range cfg.Rules {
+	for i := range cfg.Rules {
+		rule := &cfg.Rules[i]
 		selector := buildSelector(rule)
-		out = append(out, buildSelectedChecks(rule, selector)...)
+		selectedChecks, err := buildSelectedChecks(rule, selector)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, selectedChecks...)
 	}
 
-	return out
+	return out, nil
 }
 
-func buildSelector(rule model.Rule) lint.Selector {
+func buildSelector(rule *model.Rule) lint.Selector {
 	return lint.Selector{
-		Kind:        string(rule.Selector.Kind),
+		Kind:        lint.SelectorKind(rule.Selector.Kind),
 		PathRegexes: compilePatterns(rule.Selector.Path),
 		Meta:        rule.Selector.Meta,
 	}
@@ -33,40 +39,21 @@ func buildSelector(rule model.Rule) lint.Selector {
 func compilePatterns(patterns []string) []*regexp.Regexp {
 	compiled := make([]*regexp.Regexp, len(patterns))
 	for i, pat := range patterns {
-		compiled[i] = regexp.MustCompile(ensureAnchors(pat))
+		compiled[i] = regexp.MustCompile(util.EnsureAnchors(pat))
 	}
 	return compiled
 }
 
-func ensureAnchors(pat string) string {
-	anchored := pat
-	if !strings.HasPrefix(anchored, "^") {
-		anchored = "^" + anchored
-	}
-	if !strings.HasSuffix(anchored, "$") {
-		anchored += "$"
-	}
-	return anchored
-}
-
-func buildSelectedChecks(rule model.Rule, selector lint.Selector) []lint.Checker {
+func buildSelectedChecks(rule *model.Rule, selector lint.Selector) ([]lint.Checker, error) {
 	var checks []lint.Checker
 	for _, chkConfig := range rule.Apply.Checks {
-		checker, err := New(chkConfig.Type, rule.Id, reporting.SevError, chkConfig.Params)
+		checker, err := New(chkConfig.Type, rule.Id, reporting.SeverityError, chkConfig.Params)
 		if err != nil {
-			// Skip invalid checks but continue processing the rest.
-			continue
+			return nil, fmt.Errorf("build check for rule %q: %w", rule.Id, err)
 		}
 		checks = append(checks, lint.WithSelector(selector, checker))
 	}
-	return checks
-}
-
-func strDeref(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
+	return checks, nil
 }
 
 func messageDeref(m *model.Message) string {
@@ -76,22 +63,15 @@ func messageDeref(m *model.Message) string {
 	return string(*m)
 }
 
-func mapSeverity(s *model.Severity) reporting.Severity {
+func mapSeverity(s *reporting.Severity) reporting.Severity {
 	if s == nil {
 		// Default to 'error' if severity is not specified in the config.
-		return reporting.SevError
+		return reporting.SeverityError
 	}
-	switch *s {
-	case model.SeverityError:
-		return reporting.SevError
-	case model.SeverityWarn:
-		return reporting.SevWarning
-	case model.SeverityInfo:
-		return reporting.SevNote
-	default:
-		// Also default to 'error' for any invalid severity values.
-		return reporting.SevError
+	if *s == "" {
+		return reporting.SeverityError
 	}
+	return *s
 }
 
 func toStringSlice(pp []model.Predicate) []string {

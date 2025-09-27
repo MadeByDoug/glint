@@ -27,7 +27,7 @@ func normalizeDir(k *koanf.Koanf) []reporting.Report {
 
 	abs, err := filepath.Abs(dir)
 	if err != nil {
-		return []reporting.Report{reporting.Warning("C-NORM-001",
+		return []reporting.Report{reporting.Warn("C-NORM-001",
 			fmt.Sprintf("could not determine absolute path for dir %q: %v", dir, err))}
 	}
 
@@ -40,7 +40,7 @@ func normalizeDir(k *koanf.Koanf) []reporting.Report {
 			fmt.Sprintf("failed to set normalized dir: %v", err))}
 	}
 
-	return []reporting.Report{reporting.Note("C-NORM-100", "normalized dir to absolute path")}
+	return []reporting.Report{reporting.Info("C-NORM-100", "normalized dir to absolute path")}
 }
 
 func normalizeEnv(k *koanf.Koanf) []reporting.Report {
@@ -59,7 +59,7 @@ func normalizeEnv(k *koanf.Koanf) []reporting.Report {
 			fmt.Sprintf("failed to set normalized env: %v", err))}
 	}
 
-	return []reporting.Report{reporting.Note("C-NORM-101", "normalized env to lowercase")}
+	return []reporting.Report{reporting.Info("C-NORM-101", "normalized env to lowercase")}
 }
 
 func ensureLinterVersion(k *koanf.Koanf) []reporting.Report {
@@ -72,5 +72,5 @@ func ensureLinterVersion(k *koanf.Koanf) []reporting.Report {
 			fmt.Sprintf("failed to set default linter.version: %v", err))}
 	}
 
-	return []reporting.Report{reporting.Note("C-NORM-110", "defaulted linter.version to 1")}
+	return []reporting.Report{reporting.Info("C-NORM-110", "defaulted linter.version to 1")}
 }

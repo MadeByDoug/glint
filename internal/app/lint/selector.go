@@ -1,23 +1,26 @@
-// internal/app/lint/checks/selector.go
+// internal/app/lint/selector.go
 package lint
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/MrBigCode/glint/internal/app/infra/output/reporting"
-)
-
-const (
-	folderKind = "folder"
-	fileKind   = "file"
 )
 
 // Selector defines the criteria for targeting nodes in the linting tree.
 
 // Matches checks if a given node satisfies all conditions of the selector.
 func (s *Selector) Matches(n *Node) bool {
+	if n == nil {
+		return false
+	}
 	if !s.matchesNodeKind(n.Kind) {
+		return false
+	}
+
+	if !s.matchMeta(n.Meta) {
 		return false
 	}
 
@@ -41,8 +44,8 @@ func WithSelector(selector Selector, inner Checker) Checker {
 	return &SelectedCheck{selector: selector, inner: inner}
 }
 
-func (s *Selector) MatchesRelPath(rel string, kind string) bool {
-	if !s.matchesKindString(kind) {
+func (s *Selector) MatchesRelPath(rel string, kind SelectorKind) bool {
+	if !s.matchesKind(kind) {
 		return false
 	}
 	return s.matchPath(rel)
@@ -50,21 +53,21 @@ func (s *Selector) MatchesRelPath(rel string, kind string) bool {
 
 func (s *Selector) matchesNodeKind(kind NodeKind) bool {
 	switch s.Kind {
-	case folderKind:
+	case SelectorKindFolder:
 		return kind == Dir
-	case fileKind:
+	case SelectorKindFile:
 		return kind == File
 	default:
 		return false
 	}
 }
 
-func (s *Selector) matchesKindString(kind string) bool {
+func (s *Selector) matchesKind(kind SelectorKind) bool {
 	switch s.Kind {
-	case folderKind:
-		return kind == folderKind
-	case fileKind:
-		return kind == fileKind
+	case SelectorKindFolder:
+		return kind == SelectorKindFolder
+	case SelectorKindFile:
+		return kind == SelectorKindFile
 	default:
 		return false
 	}
@@ -82,6 +85,26 @@ func (s *Selector) matchPath(path string) bool {
 		}
 	}
 	return false
+}
+
+func (s *Selector) matchMeta(meta map[string]any) bool {
+	if len(s.Meta) == 0 {
+		return true
+	}
+	if len(meta) == 0 {
+		return false
+	}
+
+	for key, expected := range s.Meta {
+		value, ok := meta[key]
+		if !ok {
+			return false
+		}
+		if fmt.Sprint(value) != expected {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *SelectedCheck) applyNodeChecker(ctx context.Context, t *Tree, checker NodeChecker) []reporting.Report {

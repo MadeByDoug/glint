@@ -34,20 +34,20 @@ func New(chkType, ruleID string, severity reporting.Severity, params json.RawMes
 // --- Constructors ---
 
 func newFolderNameCheck(ruleID string, severity reporting.Severity, params json.RawMessage) (lint.Checker, error) {
-	var p model.ChFolderName
+	var p model.FolderNameCheckParams
 	if err := json.Unmarshal(params, &p); err != nil {
 		return nil, fmt.Errorf("unmarshal folderName params: %w", err)
 	}
 
 	return folder.NewFolderNameCheck(
-		folder.FolderNameConfig{
+		&folder.FolderNameConfig{
 			Predicates:     toStringSlice(p.Predicates),
 			Allow:          append([]string(nil), p.Allow...),
 			Disallow:       append([]string(nil), p.Disallow...),
-			Prefix:         strDeref(p.Prefix),
-			Suffix:         strDeref(p.Suffix),
-			ProhibitPrefix: strDeref(p.ProhibitPrefix),
-			ProhibitSuffix: strDeref(p.ProhibitSuffix),
+			Prefix:         append([]string(nil), p.Prefix...),
+			Suffix:         append([]string(nil), p.Suffix...),
+			ProhibitPrefix: append([]string(nil), p.ProhibitPrefix...),
+			ProhibitSuffix: append([]string(nil), p.ProhibitSuffix...),
 			Message:        messageDeref(p.Message),
 		},
 		ruleID,

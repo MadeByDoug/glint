@@ -26,15 +26,15 @@ type Formatter interface {
 // Reporter orchestrates the printing of diagnostics using a configured formatter.
 type Reporter struct {
 	formatter Formatter
-	min       Severity // added: minimum severity to emit
+	min       Severity
 }
 
-func New(formatter Formatter) *Reporter {
-	return &Reporter{formatter: formatter, min: SevNote} // default: emit all (backward compatible)
+func New(formatter Formatter, min Severity) *Reporter {
+	return &Reporter{formatter: formatter, min: min}
 }
 
-func (r *Reporter) SetMinSeverity(min Severity) *Reporter {
-	r.min = min
+func (r *Reporter) SetMinSeverity(threshold Severity) *Reporter {
+	r.min = threshold
 	return r
 }
 
@@ -45,7 +45,7 @@ func (r *Reporter) Emit(w io.Writer, diags []Report) bool {
 
 	r.Print(w, diags)
 	for _, d := range diags {
-		if d.Severity == SevError {
+		if d.Severity == SeverityError {
 			return true
 		}
 	}
@@ -56,18 +56,26 @@ func (r *Reporter) Print(w io.Writer, diags []Report) {
 	if w == nil {
 		w = os.Stderr
 	}
-	// added: filter by threshold
-	if r.min != SevNote {
-		filtered := make([]Report, 0, len(diags))
-		for _, d := range diags {
-			if AtLeast(d.Severity, r.min) {
-				filtered = append(filtered, d)
-			}
-		}
-		r.formatter.Print(w, filtered)
+	filtered := r.filterVisible(diags)
+	if len(filtered) == 0 {
 		return
 	}
-	r.formatter.Print(w, diags)
+	r.formatter.Print(w, filtered)
+}
+
+func (r *Reporter) filterVisible(diags []Report) []Report {
+	if len(diags) == 0 {
+		return nil
+	}
+	includeInfo := r.min == SeverityInfo
+	filtered := make([]Report, 0, len(diags))
+	for _, d := range diags {
+		if d.Severity == SeverityInfo && !includeInfo {
+			continue
+		}
+		filtered = append(filtered, d)
+	}
+	return filtered
 }
 
 // --- Text Formatter ---
@@ -129,26 +137,28 @@ func (f *TextFormatter) palette() colorPalette {
 		reset: Reset,
 		bold:  Bold,
 		colors: map[Severity]string{
-			SevError:   Red,
-			SevWarning: Yellow,
-			SevNote:    Cyan,
+			SeverityError: Red,
+			SeverityWarn:  Yellow,
+			SeverityInfo:  Cyan,
 		},
 	}
 }
 
 func (f *TextFormatter) writeDiag(w io.Writer, d Report, palette colorPalette) error {
 	if _, err := fmt.Fprintf(w, "%s%s%s%s", palette.bold, palette.colorFor(d.Severity), d.Severity, palette.reset); err != nil {
-		return err
+		return fmt.Errorf("write diagnostic severity: %w", err)
 	}
 
 	if d.Code != "" {
 		if _, err := fmt.Fprintf(w, "%s[%s]%s", palette.bold, d.Code, palette.reset); err != nil {
-			return err
+			return fmt.Errorf("write diagnostic code: %w", err)
 		}
 	}
 
-	_, err := fmt.Fprintf(w, ": %s\n", d.Msg)
-	return err
+	if _, err := fmt.Fprintf(w, ": %s\n", d.Msg); err != nil {
+		return fmt.Errorf("write diagnostic message: %w", err)
+	}
+	return nil
 }
 
 func (p colorPalette) colorFor(sev Severity) string {

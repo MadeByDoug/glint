@@ -1,3 +1,4 @@
+// internal/app/runtime/runner.go
 package runtime
 
 import (
@@ -41,7 +42,11 @@ type Runner struct {
 	router *output.Router
 }
 
-func New(opts Options) (*Runner, error) {
+func New(opts *Options) (*Runner, error) {
+	if opts == nil {
+		return nil, fmt.Errorf("runtime options cannot be nil")
+	}
+
 	router, err := output.New(output.Config{
 		ErrorFormat: opts.ErrorFormat,
 		ErrorOutput: opts.ErrorOutput,
@@ -62,13 +67,11 @@ func New(opts Options) (*Runner, error) {
 		fmtter = reporting.NewTextFormatter(router.IsDiagTTY)
 	}
 
-	rep := reporting.New(fmtter)
-
 	thr, err := reporting.ParseThreshold(opts.DiagLevel)
 	if err != nil {
 		return nil, fmt.Errorf("invalid diagnostics threshold: %w", err)
 	}
-	rep.SetMinSeverity(thr)
+	rep := reporting.New(fmtter, thr)
 
 	return &Runner{logger: logger, rep: rep, router: router}, nil
 }
@@ -77,7 +80,10 @@ func (r *Runner) Close() error {
 	if r == nil || r.router == nil {
 		return nil
 	}
-	return r.router.Close()
+	if err := r.router.Close(); err != nil {
+		return fmt.Errorf("close router: %w", err)
+	}
+	return nil
 }
 
 func (r *Runner) Run(params RunParams) (bool, error) {
@@ -97,7 +103,7 @@ func (r *Runner) Run(params RunParams) (bool, error) {
 	appCfg, diags, err := config.Load(opts, params.CLIOverrides)
 	if err != nil {
 		r.rep.Emit(r.router.Diag, diags)
-		return false, err
+		return false, fmt.Errorf("load config: %w", err)
 	}
 
 	hadError := r.rep.Emit(r.router.Diag, diags)
@@ -109,7 +115,7 @@ func (r *Runner) Run(params RunParams) (bool, error) {
 
 	ruleError, err := r.executeLint(appCfg)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("run lint: %w", err)
 	}
 
 	return hadError || ruleError, nil
@@ -147,24 +153,35 @@ func (r *Runner) dumpDebug(label string, payload any, failure string) {
 }
 
 func (r *Runner) executeLint(appCfg model.AppConfig) (bool, error) {
-	tree, err := fs.BuildTreeFromFS(appCfg.Dir, fs.BuildOptions{IncludeFiles: true})
+	checks, err := plan.FromConfig(appCfg.Linter)
 	if err != nil {
-		return false, fmt.Errorf("build tree: %w", err)
+		return false, fmt.Errorf("build plan: %w", err)
 	}
-
-	if err := lint.EnrichTree(tree, appCfg.Dir); err != nil {
-		return false, fmt.Errorf("enrich tree: %w", err)
-	}
-
-	checks := plan.FromConfig(appCfg.Linter)
 	if len(checks) == 0 {
 		return false, nil
 	}
 
+	reqs := lint.PlanRequirements(checks)
+	tree, err := fs.BuildTreeFromFS(appCfg.Dir, fs.BuildOptions{
+		IncludeFiles: reqs.IncludeFiles,
+		DirsOnly:     !reqs.IncludeFiles,
+	})
+	if err != nil {
+		return false, fmt.Errorf("build tree: %w", err)
+	}
+
+	if reqs.IncludeFiles && (reqs.NeedShallow || reqs.NeedContents) {
+		if len(reqs.FileSelectors) > 0 && !reqs.NeedContents {
+			if err := lint.EnrichTreeSelected(tree, appCfg.Dir, reqs.FileSelectors); err != nil {
+				return false, fmt.Errorf("enrich tree (selected): %w", err)
+			}
+		} else {
+			if err := lint.EnrichTree(tree, appCfg.Dir); err != nil {
+				return false, fmt.Errorf("enrich tree: %w", err)
+			}
+		}
+	}
+
 	diags := lint.Lint(context.Background(), tree, checks...)
 	return r.rep.Emit(r.router.Diag, diags), nil
-}
-
-func (r *Runner) Router() *output.Router {
-	return r.router
 }

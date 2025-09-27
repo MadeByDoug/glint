@@ -18,10 +18,10 @@ type FolderNameConfig struct {
 	Predicates     []string
 	Allow          []string
 	Disallow       []string
-	Prefix         string
-	Suffix         string
-	ProhibitPrefix string
-	ProhibitSuffix string
+	Prefix         []string
+	Suffix         []string
+	ProhibitPrefix []string
+	ProhibitSuffix []string
 	Message        string
 }
 
@@ -36,36 +36,52 @@ type FolderNameCheck struct {
 }
 
 // NewFolderNameCheck is the constructor for the FolderName check.
-func NewFolderNameCheck(config FolderNameConfig, code string, sev reporting.Severity) lint.Checker {
+func NewFolderNameCheck(config *FolderNameConfig, code string, sev reporting.Severity) lint.Checker {
+	cfg := FolderNameConfig{}
+	if config != nil {
+		cfg = *config
+	}
+
 	fn := &FolderNameCheck{
-		config:   config,
+		config:   cfg,
 		code:     code,
 		severity: sev,
 	}
-	for _, pat := range config.Allow {
-		fn.allowRes = append(fn.allowRes, regexp.MustCompile(pat))
+	for _, pat := range cfg.Allow {
+		fn.allowRes = append(fn.allowRes, regexp.MustCompile(util.EnsureAnchors(pat)))
 	}
-	for _, pat := range config.Disallow {
-		fn.disallowRes = append(fn.disallowRes, regexp.MustCompile(pat))
+	for _, pat := range cfg.Disallow {
+		fn.disallowRes = append(fn.disallowRes, regexp.MustCompile(util.EnsureAnchors(pat)))
 	}
 	return fn
 }
 
-var predicateValidators = map[string]func(string) bool{
-	"kebab": func(name string) bool {
-		return util.CheckCasing(name, []string{"kebab-case"})
-	},
-	"lowercase": func(name string) bool {
-		return util.CheckCasing(name, []string{"lower-case"})
-	},
+var predicateValidators = newPredicateValidators()
+
+func newPredicateValidators() map[string]func(string) bool {
+	validators := make(map[string]func(string) bool)
+	for _, pred := range util.SupportedCasingPredicates() {
+		casings, ok := util.PredicateCasings(pred)
+		if !ok {
+			continue
+		}
+		validators[pred] = newPredicateValidator(casings)
+	}
+	return validators
+}
+
+func newPredicateValidator(casings []string) func(string) bool {
+	casingsCopy := append([]string(nil), casings...)
+	return func(name string) bool {
+		return util.CheckCasing(name, casingsCopy)
+	}
 }
 
 func normalizePredicate(pred string) string {
-	pred = strings.TrimSpace(strings.ToLower(pred))
-	if pred == "lower" {
-		return "lowercase"
+	if canonical, ok := util.NormalizeCasingPredicateName(pred); ok {
+		return canonical
 	}
-	return pred
+	return ""
 }
 
 func (c *FolderNameCheck) ID() string { return "check.folderName" }
@@ -74,7 +90,10 @@ func (c *FolderNameCheck) Apply(_ context.Context, t *lint.Tree) []reporting.Rep
 	panic("internal error: FolderNameCheck is a node-specific check and must be wrapped in a selector")
 }
 
-func (c *FolderNameCheck) ApplyToNode(_ context.Context, n *lint.Node) []reporting.Report {
+func (c *FolderNameCheck) ApplyToNode(ctx context.Context, n *lint.Node) []reporting.Report {
+	if err := ctx.Err(); err != nil {
+		return nil
+	}
 	if !c.isTarget(n) {
 		return nil
 	}
@@ -103,9 +122,10 @@ func (c *FolderNameCheck) newReport(n *lint.Node, msg string) reporting.Report {
 	}
 }
 
-func (c *FolderNameCheck) checkPredicates(name string) (bool, string) {
+func (c *FolderNameCheck) checkPredicates(name string) []string {
+	var failed []string
 	if len(c.config.Predicates) == 0 {
-		return true, ""
+		return failed
 	}
 
 	for _, raw := range c.config.Predicates {
@@ -115,11 +135,11 @@ func (c *FolderNameCheck) checkPredicates(name string) (bool, string) {
 			continue
 		}
 		if !validator(name) {
-			return false, pred
+			failed = append(failed, pred)
 		}
 	}
 
-	return true, ""
+	return failed
 }
 
 func (c *FolderNameCheck) allowed(name string) bool {
@@ -131,7 +151,7 @@ func (c *FolderNameCheck) allowed(name string) bool {
 	return false
 }
 
-func (c *FolderNameCheck) disallowed(name string) (bool, string) {
+func (c *FolderNameCheck) disallowed(name string) (matched bool, pattern string) {
 	for _, re := range c.disallowRes {
 		if re.MatchString(name) {
 			return true, re.String()
@@ -155,7 +175,7 @@ func (c *FolderNameCheck) disallowedReport(n *lint.Node, name string) *reporting
 func (c *FolderNameCheck) collectViolations(n *lint.Node, name string) []reporting.Report {
 	var diags []reporting.Report
 
-	if ok, pred := c.checkPredicates(name); !ok {
+	for _, pred := range c.checkPredicates(name) {
 		diags = append(diags, c.newReport(n, fmt.Sprintf("name '%s' does not satisfy predicate: %s", name, pred)))
 	}
 
@@ -177,26 +197,33 @@ func (c *FolderNameCheck) propertyViolations(name string) []string {
 
 func (c *FolderNameCheck) checkRequiredAffixes(name string) []string {
 	var msgs []string
-	cfg := c.config
 
-	if cfg.Prefix != "" && !strings.HasPrefix(name, cfg.Prefix) {
-		msgs = append(msgs, fmt.Sprintf("name '%s' does not have required prefix '%s'", name, cfg.Prefix))
+	for _, prefix := range c.config.Prefix {
+		if !strings.HasPrefix(name, prefix) {
+			msgs = append(msgs, fmt.Sprintf("name '%s' does not have required prefix '%s'", name, prefix))
+		}
 	}
-	if cfg.Suffix != "" && !strings.HasSuffix(name, cfg.Suffix) {
-		msgs = append(msgs, fmt.Sprintf("name '%s' does not have required suffix '%s'", name, cfg.Suffix))
+	for _, suffix := range c.config.Suffix {
+		if !strings.HasSuffix(name, suffix) {
+			msgs = append(msgs, fmt.Sprintf("name '%s' does not have required suffix '%s'", name, suffix))
+		}
 	}
+
 	return msgs
 }
 
 func (c *FolderNameCheck) checkProhibitedAffixes(name string) []string {
 	var msgs []string
-	cfg := c.config
 
-	if cfg.ProhibitPrefix != "" && strings.HasPrefix(name, cfg.ProhibitPrefix) {
-		msgs = append(msgs, fmt.Sprintf("name '%s' has prohibited prefix '%s'", name, cfg.ProhibitPrefix))
+	for _, prefix := range c.config.ProhibitPrefix {
+		if strings.HasPrefix(name, prefix) {
+			msgs = append(msgs, fmt.Sprintf("name '%s' has prohibited prefix '%s'", name, prefix))
+		}
 	}
-	if cfg.ProhibitSuffix != "" && strings.HasSuffix(name, cfg.ProhibitSuffix) {
-		msgs = append(msgs, fmt.Sprintf("name '%s' has prohibited suffix '%s'", name, cfg.ProhibitSuffix))
+	for _, suffix := range c.config.ProhibitSuffix {
+		if strings.HasSuffix(name, suffix) {
+			msgs = append(msgs, fmt.Sprintf("name '%s' has prohibited suffix '%s'", name, suffix))
+		}
 	}
 
 	return msgs

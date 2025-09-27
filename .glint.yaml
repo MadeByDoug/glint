@@ -9,8 +9,7 @@ linter:
           - "^[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^\\.git$"
@@ -32,8 +31,7 @@ linter:
           - "^cmd/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^glint$"
@@ -48,12 +46,10 @@ linter:
           - "^internal/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^app$"
-                - "^markdown$"
               disallow:
                 - ".*"
               message: "internal/ should only contain the app layer and shared markdown tooling."
@@ -65,8 +61,7 @@ linter:
           - "^internal/app/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^config$"
@@ -84,8 +79,7 @@ linter:
           - "^internal/app/config/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^model$"
@@ -100,8 +94,7 @@ linter:
           - "^internal/app/infra/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^output$"
@@ -116,8 +109,7 @@ linter:
           - "^internal/app/infra/output/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^log$"
@@ -133,8 +125,7 @@ linter:
           - "^internal/app/lint/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^checks$"
@@ -153,8 +144,7 @@ linter:
           - "^internal/app/lint/checks/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^folder$"
@@ -171,8 +161,7 @@ linter:
           - "^internal/app/lint/checks/tests/[^/]+$"
       apply:
         checks:
-          - type: folderName
-            params:
+          - folderName:
               severity: error
               allow:
                 - "^folder$"

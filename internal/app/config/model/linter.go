@@ -7,19 +7,22 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/MrBigCode/glint/internal/app/infra/output/reporting"
+	util "github.com/MrBigCode/glint/internal/app/lint/util"
 )
 
 // ----------------------
 // Core types
 // ----------------------
 
-type ConfigSchemaJson struct {
+type LinterConfig struct {
 	Version int    `json:"version" yaml:"version" mapstructure:"version"`
 	Rules   []Rule `json:"rules"   yaml:"rules"   mapstructure:"rules"`
 }
 
-func (c *ConfigSchemaJson) UnmarshalJSON(b []byte) error {
-	type plain ConfigSchemaJson
+func (c *LinterConfig) UnmarshalJSON(b []byte) error {
+	type plain LinterConfig
 	var p plain
 	if err := strictDecode(b, &p); err != nil {
 		return err
@@ -30,7 +33,7 @@ func (c *ConfigSchemaJson) UnmarshalJSON(b []byte) error {
 	if len(p.Rules) == 0 {
 		return fmt.Errorf("field rules: must contain at least 1 rule")
 	}
-	*c = ConfigSchemaJson(p)
+	*c = LinterConfig(p)
 	return nil
 }
 
@@ -116,14 +119,12 @@ func (c *ApplyCheck) UnmarshalJSON(b []byte) error {
 
 	var e explicit
 	if err := strictDecode(b, &e); err == nil && strings.TrimSpace(e.Type) != "" {
-		c.Type = e.Type
-		c.Params = e.Params
-		return nil
+		return fmt.Errorf("apply.checks item: type/params form is no longer supported; use compact syntax like {\"folderName\": {...}}")
 	}
 
 	var m map[string]json.RawMessage
 	if err := strictDecode(b, &m); err != nil {
-		return fmt.Errorf("apply.checks item: expected object with either type/params or single key: %w", err)
+		return fmt.Errorf("apply.checks item: expected object with single check entry: %w", err)
 	}
 	if len(m) != 1 {
 		return fmt.Errorf("apply.checks item: expected exactly one check entry, found %d", len(m))
@@ -142,60 +143,33 @@ func (c *ApplyCheck) UnmarshalJSON(b []byte) error {
 // FolderName check (single canonical shape)
 // ----------------------
 
-type Severity string
-
-const (
-	SeverityError Severity = "error"
-	SeverityWarn  Severity = "warn"
-	SeverityInfo  Severity = "info"
-)
-
 type Message string
 
-// ChFolderName directly contains rule fields + optional reporting fields.
-type ChFolderName struct {
+// FolderNameCheckParams directly contains rule fields + optional reporting fields.
+type FolderNameCheckParams struct {
 	// generalized policy
 	Predicates Predicates `json:"predicates,omitempty" yaml:"predicates,omitempty" mapstructure:"predicates,omitempty"`
 	Allow      RegexList  `json:"allow,omitempty"      yaml:"allow,omitempty"      mapstructure:"allow,omitempty"`
 	Disallow   RegexList  `json:"disallow,omitempty"   yaml:"disallow,omitempty"   mapstructure:"disallow,omitempty"`
 
 	// optional constraints (kept for parity; still useful)
-	Prefix         *string `json:"prefix,omitempty"         yaml:"prefix,omitempty"`
-	Suffix         *string `json:"suffix,omitempty"         yaml:"suffix,omitempty"`
-	ProhibitPrefix *string `json:"prohibitPrefix,omitempty" yaml:"prohibitPrefix,omitempty"`
-	ProhibitSuffix *string `json:"prohibitSuffix,omitempty" yaml:"prohibitSuffix,omitempty"`
+	Prefix         StringList `json:"prefix,omitempty"         yaml:"prefix,omitempty"`
+	Suffix         StringList `json:"suffix,omitempty"         yaml:"suffix,omitempty"`
+	ProhibitPrefix StringList `json:"prohibitPrefix,omitempty" yaml:"prohibitPrefix,omitempty"`
+	ProhibitSuffix StringList `json:"prohibitSuffix,omitempty" yaml:"prohibitSuffix,omitempty"`
 
 	// reporting
-	Message  *Message  `json:"message,omitempty"  yaml:"message,omitempty"`
-	Severity *Severity `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Message  *Message            `json:"message,omitempty"  yaml:"message,omitempty"`
+	Severity *reporting.Severity `json:"severity,omitempty" yaml:"severity,omitempty"`
 }
 
-func (j *ChFolderName) UnmarshalJSON(b []byte) error {
-	type plain ChFolderName
+func (j *FolderNameCheckParams) UnmarshalJSON(b []byte) error {
+	type plain FolderNameCheckParams
 	var p plain
 	if err := strictDecode(b, &p); err != nil {
 		return err
 	}
-	*j = ChFolderName(p)
-	return nil
-}
-
-// ChMarkdownSchema defines the parameters for the markdown schema check.
-type ChMarkdownSchema struct {
-	Schema   string    `json:"schema" yaml:"schema" mapstructure:"schema"`
-	Severity *Severity `json:"severity,omitempty" yaml:"severity,omitempty"`
-}
-
-func (c *ChMarkdownSchema) UnmarshalJSON(b []byte) error {
-	type plain ChMarkdownSchema
-	var p plain
-	if err := strictDecode(b, &p); err != nil {
-		return err
-	}
-	if strings.TrimSpace(p.Schema) == "" {
-		return fmt.Errorf("field schema in markdownSchema params: required")
-	}
-	*c = ChMarkdownSchema(p)
+	*j = FolderNameCheckParams(p)
 	return nil
 }
 
@@ -223,12 +197,31 @@ func (rl *RegexList) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type StringList []string
+
+func (sl *StringList) UnmarshalJSON(b []byte) error {
+	var list []string
+	if err := strictDecode(b, &list); err != nil {
+		return err
+	}
+	for i, s := range list {
+		if strings.TrimSpace(s) == "" {
+			return fmt.Errorf("string list entry at index %d: empty strings are not allowed", i)
+		}
+	}
+	*sl = list
+	return nil
+}
+
 type Predicate string
 
 const (
-	PredicateKebab Predicate = "kebab"
-	PredicateLower Predicate = "lowercase"
-	// future: PredicateSnake, PredicatePascal, etc.
+	PredicateCamel  Predicate = "camel"
+	PredicateKebab  Predicate = "kebab"
+	PredicateLower  Predicate = "lower"
+	PredicatePascal Predicate = "pascal"
+	PredicateSnake  Predicate = "snake"
+	PredicateUpper  Predicate = "upper"
 )
 
 func (p *Predicate) UnmarshalJSON(b []byte) error {
@@ -236,53 +229,45 @@ func (p *Predicate) UnmarshalJSON(b []byte) error {
 	if err := strictDecode(b, &s); err != nil {
 		return err
 	}
-	switch Predicate(s) {
-	case PredicateKebab, PredicateLower, "":
-		*p = Predicate(s)
-		return nil
-	default:
-		return fmt.Errorf("unknown predicate %q (valid: kebab, lowercase)", s)
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return fmt.Errorf("predicate: empty strings are not allowed")
 	}
+	if trimmed != s {
+		return fmt.Errorf("predicate: leading or trailing whitespace is not allowed")
+	}
+	if canonical, ok := util.NormalizeCasingPredicateName(trimmed); ok {
+		*p = Predicate(canonical)
+		return nil
+	}
+	return fmt.Errorf(
+		"unknown predicate %q (valid: %s)",
+		trimmed,
+		strings.Join(util.SupportedCasingPredicates(), ", "),
+	)
 }
 
 type Predicates []Predicate
 
 func (pp *Predicates) UnmarshalJSON(b []byte) error {
-	// accept single string or list
-	var s string
-	if err := strictDecode(b, &s); err == nil {
-		if s == "" {
-			*pp = nil
-			return nil
-		}
-		var p Predicate
-		if err := (&p).UnmarshalJSON([]byte(`"` + s + `"`)); err != nil {
-			return err
-		}
-		*pp = Predicates{p}
-		return nil
-	}
-	var lst []Predicate
+	var lst []string
 	if err := strictDecode(b, &lst); err != nil {
 		return err
 	}
-	*pp = lst
-	return nil
-}
-
-func (s *Severity) UnmarshalJSON(b []byte) error {
-	var v string
-	// Use strictDecode for consistency; this expects a JSON string, not an object.
-	if err := strictDecode(b, &v); err != nil {
-		return err
-	}
-	switch Severity(v) {
-	case SeverityError, SeverityWarn, SeverityInfo, "":
-		*s = Severity(v)
+	if len(lst) == 0 {
+		*pp = nil
 		return nil
-	default:
-		return fmt.Errorf("invalid severity: %q", v)
 	}
+	out := make([]Predicate, len(lst))
+	for i, raw := range lst {
+		var predicate Predicate
+		if err := (&predicate).UnmarshalJSON([]byte(`"` + raw + `"`)); err != nil {
+			return fmt.Errorf("predicates[%d]: %w", i, err)
+		}
+		out[i] = predicate
+	}
+	*pp = out
+	return nil
 }
 
 // ----------------------
@@ -292,7 +277,10 @@ func (s *Severity) UnmarshalJSON(b []byte) error {
 func strictDecode(b []byte, out any) error {
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
-	return dec.Decode(out)
+	if err := dec.Decode(out); err != nil {
+		return fmt.Errorf("decode JSON payload: %w", err)
+	}
+	return nil
 }
 
 // ----------------------

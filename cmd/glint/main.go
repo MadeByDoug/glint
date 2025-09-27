@@ -35,7 +35,7 @@ func main() {
 func run() int {
 	flags := parseFlags()
 
-	runner, err := runtime.New(runtime.Options{
+	runner, err := runtime.New(&runtime.Options{
 		ErrorFormat: flags.errorFormat,
 		ErrorOutput: flags.errorOutput,
 		LogOutput:   flags.logOutput,
@@ -43,12 +43,12 @@ func run() int {
 		LogLevel:    flags.logLevel,
 	})
 	if err != nil {
-		return bootstrapFatal(flags.errorFormat, flags.errorOutput, "F-INIT-001", err.Error())
+		return bootstrapFatal(flags.errorFormat, flags.errorOutput, "F-INIT-001", "initialization failed", err)
 	}
 
-	exitCode := execute(flags, runner)
+	exitCode := execute(&flags, runner)
 	if closeErr := runner.Close(); closeErr != nil {
-		if closeCode := bootstrapFatal(flags.errorFormat, flags.errorOutput, "F-EXIT-001", fmt.Sprintf("close outputs: %v", closeErr)); exitCode == 0 {
+		if closeCode := bootstrapFatal(flags.errorFormat, flags.errorOutput, "F-EXIT-001", "failed to close outputs", closeErr); exitCode == 0 {
 			exitCode = closeCode
 		}
 	}
@@ -56,7 +56,7 @@ func run() int {
 	return exitCode
 }
 
-func execute(flags cliFlags, runner *runtime.Runner) int {
+func execute(flags *cliFlags, runner *runtime.Runner) int {
 	cliOverrides := overlaysFromFlags(flags.dir, flags.debug, flags.envName)
 
 	hadFatalDiagnostics, err := runner.Run(runtime.RunParams{
@@ -67,7 +67,7 @@ func execute(flags cliFlags, runner *runtime.Runner) int {
 		CLIOverrides: cliOverrides,
 	})
 	if err != nil {
-		return bootstrapFatal(flags.errorFormat, flags.errorOutput, "F-RUN-001", err.Error())
+		return bootstrapFatal(flags.errorFormat, flags.errorOutput, "F-RUN-001", "runtime execution failed", err)
 	}
 
 	if hadFatalDiagnostics {
@@ -87,8 +87,8 @@ func parseFlags() cliFlags {
 	errorOutputFlag := flag.String("error-output", "stderr", "Error output: stderr | stdout | <filename>")
 	logOutputFlag := flag.String("log-output", "", "Log output: stderr | stdout | <filename> (empty/none disables)")
 
-	diagLevelFlag := flag.String("diag-level", "error", "Diagnostic verbosity: error | warn | note")
-	logLevelFlag := flag.String("log-level", "off", "Log verbosity: off | error | info")
+	diagLevelFlag := flag.String("diag-level", "warn", "Diagnostic verbosity: warn | info")
+	logLevelFlag := flag.String("log-level", "warn", "Log verbosity: warn | info")
 
 	flag.Parse()
 
@@ -105,7 +105,7 @@ func parseFlags() cliFlags {
 	}
 }
 
-func bootstrapFatal(format, dest, code, msg string) int {
+func bootstrapFatal(format, dest, code, msg string, cause error) int {
 	// Use the application's own output routing and formatting for consistency,
 	// even for fatal startup errors.
 	router, err := output.New(output.Config{
@@ -115,7 +115,11 @@ func bootstrapFatal(format, dest, code, msg string) int {
 	})
 	if err != nil {
 		// If the router itself fails, fall back to a raw stderr print.
-		fmt.Fprintf(os.Stderr, "error[%s]: %s (and could not init output: %v)\n", code, msg, err)
+		if cause != nil {
+			fmt.Fprintf(os.Stderr, "error[%s]: %s: %v (and could not init output: %v)\n", code, msg, cause, err)
+		} else {
+			fmt.Fprintf(os.Stderr, "error[%s]: %s (and could not init output: %v)\n", code, msg, err)
+		}
 		return 1
 	}
 	defer func() {
@@ -134,9 +138,13 @@ func bootstrapFatal(format, dest, code, msg string) int {
 		fmtter = reporting.NewTextFormatter(router.IsDiagTTY)
 	}
 
-	rep := reporting.New(fmtter)
+	rep := reporting.New(fmtter, reporting.SeverityError)
+	detail := msg
+	if cause != nil {
+		detail = fmt.Sprintf("%s: %v", msg, cause)
+	}
 	rep.Print(router.Diag, []reporting.Report{
-		reporting.Error(code, msg),
+		reporting.Error(code, detail),
 	})
 
 	return 1

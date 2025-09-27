@@ -59,11 +59,11 @@ func openDest(dest string) (w io.Writer, isTTY bool, closer io.Closer, err error
 	default:
 		cleanDest, err := sanitizeOutputPath(dest)
 		if err != nil {
-			return nil, false, nil, err
+			return nil, false, nil, fmt.Errorf("sanitize output path %q: %w", dest, err)
 		}
 		f, e := os.Create(cleanDest) // #nosec G304 -- sanitizeOutputPath ensures dest cannot escape allowed directories
 		if e != nil {
-			return nil, false, nil, e
+			return nil, false, nil, fmt.Errorf("create output file %q: %w", cleanDest, e)
 		}
 		return f, false, f, nil
 	}

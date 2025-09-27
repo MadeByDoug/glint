@@ -33,9 +33,9 @@ func Load(opts model.Options, cliOverrides map[string]any) (model.AppConfig, []r
 
 	diags = append(diags, loadDefaults(k, opts)...)
 
-    searchDirs, envName, dirDiags := resolveConfigSearch(k, opts)
-    diags = append(diags, dirDiags...)
-    diags = append(diags, loadConfigFiles(k, searchDirs, envName)...)
+	searchDirs, envName, dirDiags := resolveConfigSearch(k, opts)
+	diags = append(diags, dirDiags...)
+	diags = append(diags, loadConfigFiles(k, searchDirs, envName)...)
 
 	if opts.ConfigPath != "" {
 		diags = append(diags, loadYAML(k, opts.ConfigPath, true)...)
@@ -54,22 +54,20 @@ func Load(opts model.Options, cliOverrides map[string]any) (model.AppConfig, []r
 	return appConfig, diags, nil
 }
 
-func resolveConfigSearch(k *koanf.Koanf, opts model.Options) ([]string, string, []reporting.Report) {
-	var diags []reporting.Report
-
+func resolveConfigSearch(k *koanf.Koanf, opts model.Options) (dirs []string, envName string, diags []reporting.Report) {
 	cwd, cwdErr := os.Getwd()
 	if cwdErr != nil {
-		diags = append(diags, reporting.Warning("C-LOAD-010",
+		diags = append(diags, reporting.Warn("C-LOAD-010",
 			fmt.Sprintf("unable to determine current working directory: %v", cwdErr)))
 	}
 
 	home, homeErr := os.UserHomeDir()
 	if homeErr != nil {
-		diags = append(diags, reporting.Warning("C-LOAD-011",
+		diags = append(diags, reporting.Warn("C-LOAD-011",
 			fmt.Sprintf("unable to determine user home directory: %v", homeErr)))
 	}
 
-	dirs := make([]string, 0, 2)
+	dirs = make([]string, 0, 2)
 	if homeErr == nil {
 		dirs = append(dirs, home)
 	}
@@ -77,7 +75,7 @@ func resolveConfigSearch(k *koanf.Koanf, opts model.Options) ([]string, string, 
 		dirs = append(dirs, cwd)
 	}
 
-	envName := k.String(KeyEnv)
+	envName = k.String(KeyEnv)
 	if opts.EnvName != "" {
 		envName = opts.EnvName
 	}
@@ -87,33 +85,33 @@ func resolveConfigSearch(k *koanf.Koanf, opts model.Options) ([]string, string, 
 }
 
 func loadConfigFiles(k *koanf.Koanf, searchDirs []string, envName string) []reporting.Report {
-    var diags []reporting.Report
-    for _, dir := range searchDirs {
-        for _, candidate := range configCandidates(dir, envName) {
-            diags = append(diags, loadYAML(k, candidate, false)...)
-        }
-    }
-    return diags
+	var diags []reporting.Report
+	for _, dir := range searchDirs {
+		for _, candidate := range configCandidates(dir, envName) {
+			diags = append(diags, loadYAML(k, candidate, false)...)
+		}
+	}
+	return diags
 }
 
 func configCandidates(dir, envName string) []string {
-    base := filepath.Join(dir, ".glint")
-    candidates := []string{
-        base,
-        base + ".yaml",
-        base + ".yml",
-    }
+	base := filepath.Join(dir, ".glint")
+	candidates := []string{
+		base,
+		base + ".yaml",
+		base + ".yml",
+	}
 
-    if envName != "" {
-        envBase := base + "." + envName
-        candidates = append(candidates,
-            envBase,
-            envBase+".yaml",
-            envBase+".yml",
-        )
-    }
+	if envName != "" {
+		envBase := base + "." + envName
+		candidates = append(candidates,
+			envBase,
+			envBase+".yaml",
+			envBase+".yml",
+		)
+	}
 
-    return candidates
+	return candidates
 }
 
 func applyCLIOverrides(k *koanf.Koanf, overrides map[string]any) []reporting.Report {
@@ -146,18 +144,18 @@ func loadYAML(k *koanf.Koanf, path string, required bool) []reporting.Report {
 }
 
 func invalidYAMLExtension(path string, required bool) *reporting.Report {
-    if !required {
-        return nil
-    }
+	if !required {
+		return nil
+	}
 
-    ext := strings.ToLower(filepath.Ext(path))
-    if ext == "" || ext == ".yaml" || ext == ".yml" {
-        return nil
-    }
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == "" || ext == ".yaml" || ext == ".yml" {
+		return nil
+	}
 
-    rep := reporting.Error("C-LOAD-020",
-        fmt.Sprintf("unsupported config file extension for %q (only .yaml/.yml or none)", path))
-    return &rep
+	rep := reporting.Error("C-LOAD-020",
+		fmt.Sprintf("unsupported config file extension for %q (only .yaml/.yml or none)", path))
+	return &rep
 }
 
 func ensureYAMLExists(path string, required bool) (bool, []reporting.Report) {
@@ -170,7 +168,7 @@ func ensureYAMLExists(path string, required bool) (bool, []reporting.Report) {
 			}
 			return false, nil
 		}
-		rep := reporting.Warning("C-LOAD-024",
+		rep := reporting.Warn("C-LOAD-024",
 			fmt.Sprintf("cannot stat config file %s: %v", path, err))
 		return false, []reporting.Report{rep}
 	}
@@ -183,7 +181,7 @@ func parseYAMLFile(k *koanf.Koanf, path string) []reporting.Report {
 			fmt.Sprintf("failed to load %s: %v", path, err))
 		return []reporting.Report{rep}
 	}
-	rep := reporting.Note("C-LOAD-120",
+	rep := reporting.Info("C-LOAD-120",
 		fmt.Sprintf("loaded config file: %s", path))
 	return []reporting.Report{rep}
 }
@@ -218,7 +216,7 @@ func loadEnvOverrides(k *koanf.Koanf, prefix string) []reporting.Report {
 		diags = append(diags, reporting.Error("C-LOAD-023",
 			fmt.Sprintf("load env overrides with prefix %q: %v", prefix, err)))
 	} else {
-		diags = append(diags, reporting.Note("C-LOAD-121",
+		diags = append(diags, reporting.Info("C-LOAD-121",
 			fmt.Sprintf("loaded env overrides with prefix %q", prefix)))
 	}
 	return diags
@@ -241,16 +239,16 @@ func loadDefaults(k *koanf.Koanf, opts model.Options) []reporting.Report {
 		diags = append(diags, reporting.Error("C-LOAD-000",
 			fmt.Sprintf("load defaults: %v", err)))
 	} else {
-		diags = append(diags, reporting.Note("C-LOAD-100", "loaded default configuration"))
+		diags = append(diags, reporting.Info("C-LOAD-100", "loaded default configuration"))
 	}
 
 	// Caller-supplied defaults (optional, still lowest precedence)
 	if len(opts.Defaults) > 0 {
 		if err := k.Load(confmap.Provider(opts.Defaults, keyDelimiter), nil); err != nil {
-			diags = append(diags, reporting.Warning("C-LOAD-001",
+			diags = append(diags, reporting.Warn("C-LOAD-001",
 				fmt.Sprintf("apply caller defaults: %v", err)))
 		} else {
-			diags = append(diags, reporting.Note("C-LOAD-101", "applied caller defaults"))
+			diags = append(diags, reporting.Info("C-LOAD-101", "applied caller defaults"))
 		}
 	}
 	return diags

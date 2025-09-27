@@ -1,3 +1,4 @@
+// internal/app/lint/models.go
 package lint
 
 import (
@@ -6,7 +7,6 @@ import (
 
 	"github.com/MrBigCode/glint/internal/app/infra/output/reporting"
 )
-
 
 type Checker interface {
 	// ID should be stable across versions for diagnostics & suppressions.
@@ -35,9 +35,16 @@ type NodeChecker interface {
 
 type NodeKind int
 
+type SelectorKind string
+
+const (
+	SelectorKindFolder SelectorKind = "folder"
+	SelectorKindFile   SelectorKind = "file"
+)
+
 type Selector struct {
 	PathRegexes []*regexp.Regexp
-	Kind        string `yaml:"kind"` // "folder"
+	Kind        SelectorKind `yaml:"kind"`
 	Meta        map[string]string
 }
 
@@ -49,4 +56,3 @@ type SelectedCheck struct {
 type Tree struct {
 	Root *Node
 }
-
