@@ -1,0 +1,45 @@
+name: automerge-rfc-prs
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, synchronize, labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  enable-automerge:
+    # Only when repo-level var enables it AND PR is not draft AND base is main
+    if: ${{ vars.AUTOMERGE_RFC == 'true' && !github.event.pull_request.draft && github.event.pull_request.base.ref == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check RFC head branch name
+        id: branch_check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const headRef = context.payload.pull_request.head.ref || '';
+            // RFC branches like 2025-sept.rfc1
+            const isRfcBranch = /^\d{4}-[A-Za-z]{3}\.rfc\d+$/.test(headRef);
+            core.setOutput('is_rfc_branch', String(isRfcBranch));
+
+      - name: Check for automerge label
+        if: steps.branch_check.outputs.is_rfc_branch == 'true'
+        id: gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = (context.payload.pull_request.labels || []).map(l=>l.name);
+            const allowed = labels.includes('automerge') || labels.includes('agent:automerge');
+            core.setOutput('allowed', String(allowed));
+
+      # Enable GitHub Auto-merge (squash). If merge queue is enabled,
+      # this simply enqueues the PR; landing happens only after all checks pass on the queued tip.
+      - name: Enable auto-merge (squash)
+        if: steps.branch_check.outputs.is_rfc_branch == 'true' && steps.gate.outputs.allowed == 'true'
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: squash

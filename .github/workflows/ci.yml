@@ -1,0 +1,221 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [ main, '**.rfc*' ]
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  # Run on GitHub's merge queue staging branches (can't reliably diff here, so we don't skip)
+  merge_group:
+  push:
+    branches: [ '**.rfc*' ]
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.24.x'
+  COVERAGE_MIN: '10'
+
+jobs:
+  # --- Lightweight gate: decide if code changed vs docs-only ---
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      code_changed: ${{ steps.compute.outputs.code_changed }}
+      docs_or_rfc_only: ${{ steps.compute.outputs.docs_only }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Paths filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          # NOTE: This action supports pull_request and push well.
+          # merge_group lacks a diff list; we will run full CI for merge_group.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            # Any non-docs (code) change?
+            code:
+              - '**/*'
+              - '!docs/**'
+              - '!rfcs/**'
+              - '!**/*.md'
+              - '!.gitignore'
+              - '!.gitattributes'
+              - '!LICENSE*'
+              - '!README.md'
+            # Pure docs/RFC/markdown change?
+            docs_rfc_md:
+              - 'docs/**'
+              - 'rfcs/**'
+              - '**/*.md'
+
+      - name: Compute changed files and gates (robust)
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          event="${{ github.event_name }}"
+          if [[ "$event" == "pull_request" || "$event" == "pull_request_target" ]]; then
+            base_sha='${{ github.event.pull_request.base.sha }}'
+            head_sha='${{ github.event.pull_request.head.sha }}'
+            # Ensure refs exist for diff (some runners need explicit fetch)
+            git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}" --depth=1 || true
+            git fetch --no-tags origin "${{ github.event.pull_request.head.ref }}" --depth=1 || true
+            range="$base_sha...$head_sha"
+          else
+            before='${{ github.event.before }}'
+            after='${{ github.sha }}'
+            if [[ -z "$before" || "$before" == 0000000000000000000000000000000000000000 ]]; then
+              # New branch or unknown before; compare to first parent if present
+              if git rev-parse --verify -q HEAD^ >/dev/null; then
+                range="HEAD^...HEAD"
+              else
+                range="$after"
+              fi
+            else
+              range="$before...$after"
+            fi
+          fi
+
+          files=$(git diff --name-only $range || true)
+          echo "Changed files:\n$files"
+
+          filter_code='${{ steps.filter.outputs.code }}'
+          filter_docs='${{ steps.filter.outputs.docs_rfc_md }}'
+
+          # Determine if any file is NOT docs/rfcs/markdown/ignore-list
+          non_docs=$(echo "$files" | grep -E '.' | grep -Ev '^(docs/|rfcs/)|'"\\.md$"'|^\.gitignore$|^\.gitattributes$|^LICENSE' || true)
+
+          code_changed=false
+          docs_only=false
+
+          if [[ "$filter_code" == "true" ]]; then
+            code_changed=true
+          elif [[ -n "$non_docs" ]]; then
+            code_changed=true
+          fi
+
+          if [[ "$code_changed" == "false" ]]; then
+            if [[ "$filter_docs" == "true" && -z "$non_docs" && -n "$files" ]]; then
+              docs_only=true
+            fi
+          fi
+
+          if [[ -z "$files" ]]; then
+            docs_only=true
+          fi
+
+          echo "code_changed=$code_changed" >> $GITHUB_OUTPUT
+          echo "docs_only=$docs_only" >> $GITHUB_OUTPUT
+
+  # --- Build & test matrix (runs only when code changed OR in merge_queue) ---
+  build-test:
+    needs: changes
+    if: ${{ github.event_name == 'merge_group' || needs.changes.outputs.code_changed == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        gate: [off, on]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Go version
+        run: go version
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Tidy (no diff)
+        run: |
+          go mod tidy
+          git diff --exit-code
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: GolangCI-Lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+
+      - name: Set preview gate mode
+        shell: bash
+        run: |
+          if [ "${{ matrix.gate }}" = "on" ]; then
+            echo "CLI_PREVIEW=all" >> $GITHUB_ENV
+          else
+            echo "CLI_PREVIEW=" >> $GITHUB_ENV
+          fi
+
+      - name: Test (race + coverage)
+        run: go test ./... -race -shuffle=on -coverpkg=./... -coverprofile=coverage.out -covermode=atomic
+
+      - name: Govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          repo-checkout: false
+
+      - name: CLI smoke (optional)
+        if: ${{ hashFiles('cmd/glint/**') != '' }}
+        run: go run ./cmd/glint --help
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.gate }}
+          path: ${{ github.workspace }}/coverage.out
+
+  coverage-gate:
+    needs: [changes, build-test]
+    # Only run when build-test ran (i.e., code changed or merge_queue)
+    if: ${{ github.event_name == 'merge_group' || needs.changes.outputs.code_changed == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go (for cover tool)
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download coverage artifacts (both modes)
+        uses: actions/download-artifact@v4
+        with:
+          path: coverage
+
+      - name: Enforce coverage threshold (OFF mode is the gate)
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="coverage/coverage-off/coverage.out"
+          if [[ ! -f "$file" ]]; then
+            echo "coverage.out (OFF mode) not found at $file" >&2
+            ls -lR coverage || true
+            exit 1
+          fi
+          pct=$(go tool cover -func="$file" | awk '/total:/ {gsub(/%/, "", $3); print $3}')
+          echo "Total coverage (OFF mode): ${pct}%"
+          awk -v p="$pct" -v m="${COVERAGE_MIN}" 'BEGIN { if (p+0 < m+0) { printf("Coverage %s%% is below %s%%\n", p, m); exit 1 } else { printf("Coverage OK: %s%% >= %s%%\n", p, m) } }'
+
+  # -

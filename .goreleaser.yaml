@@ -1,0 +1,41 @@
+version: 2
+project_name: glint
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: glint
+    main: ./cmd/glint
+    binary: glint
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows, freebsd]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+archives:
+  - id: archive
+    builds: [glint]
+    format: tar.gz
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    files:
+      - LICENSE*
+      - README.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^chore:'
+
+release:
+  prerelease: auto

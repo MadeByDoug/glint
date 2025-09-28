@@ -1,0 +1,52 @@
+name: cut-rc
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release minor version (X.Y)'
+        required: true
+  schedule:
+    - cron: '0 9 1 * *' # monthly example: 09:00 UTC on the 1st
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cut:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Create RC branch from main
+        shell: bash
+        run: |
+          set -e
+          ver="${{ inputs.version }}"
+          if [[ -z "$ver" ]]; then
+            echo "version input required (X.Y)"; exit 1
+          fi
+          git fetch origin main
+          git switch -c rc/v${ver} origin/main
+          git push origin rc/v${ver}
+      - name: Open RC checklist PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ver = process.env.VERSION = '${{ inputs.version }}';
+            const title = `RC v${ver}`;
+            const body = [
+              '### RC checklist',
+              '- [ ] No `release-blocker` issues open',
+              '- [ ] 3 consecutive green runs on `rc/v' + ver + '`',
+              '- [ ] Changelog prepared',
+              '- [ ] Provenance/SBOM attached',
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['rc']
+            });

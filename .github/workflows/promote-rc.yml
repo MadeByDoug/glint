@@ -1,0 +1,46 @@
+name: promote-rc
+
+on:
+  pull_request:
+    branches: [ 'rc/**' ]
+    types: [ labeled, closed ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Promote rc/vX.Y to GA'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promote-rc-${{ github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  promote:
+    # Either: PR on rc/* labeled release:promote, or manual dispatch with version
+    if: |
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'release:promote')) ||
+      (github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('rc/v{0}', inputs.version) || github.ref }}
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24.x' }
+      - name: Validate RC gates
+        run: |
+          echo "TODO: assert N consecutive green runs + zero release-blockers (query API)"; true
+      - name: Build
+        run: go build -trimpath -ldflags "-s -w" -o dist/cli ./...
+      - name: Tag & Release GA
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event_name == 'workflow_dispatch' && inputs.version || '0.0.0' }}.0
+          generate_release_notes: true
+          files: dist/cli
+          draft: false
+          prerelease: false

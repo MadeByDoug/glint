@@ -1,0 +1,6 @@
+# Default: require owner review
+* @DougB-Code
+
+# CI workflows
+.github/workflows/** @DougB-Code
+
