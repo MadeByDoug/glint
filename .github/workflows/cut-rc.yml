@@ -31,7 +31,7 @@ jobs:
           git switch -c rc/v${ver} origin/main
           git push origin rc/v${ver}
       - name: Open RC checklist PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const ver = process.env.VERSION = '${{ inputs.version }}';
