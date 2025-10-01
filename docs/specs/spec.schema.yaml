@@ -1,0 +1,84 @@
+# rfc/rfc.schema.yaml
+
+definitions:
+  rfc_meta:
+    - type: list
+      item_count: 2
+
+sections:
+  use-case:
+    structure:
+      - type: heading
+        level: 1
+        policies: [require-rfc-prefix]
+      - $ref: "#/definitions/rfc_meta"
+      - type: heading
+        level: 2
+        text: "Summary"
+      - type: freeform
+        max_blocks: 50
+
+      # - type: heading
+      #   level: 2
+      #   text: "Motivation"
+      # - type: paragraph
+      # - type: heading
+      #   level: 3
+
+  # complete:
+  #   structure:
+  #     - type: heading
+  #       level: 1
+  #     - $ref: "#/definitions/rfc_meta"
+  #     - type: heading
+  #       level: 2
+  #       text: "Summary"
+  #     - type: paragraph
+  #     - type: heading
+  #       level: 2
+  #       text: "Motivation"
+  #     - type: paragraph
+  #     - type: heading
+  #       level: 2
+  #       text: "Design"
+  #     - type: heading
+  #       level: 3
+  #       text: "Scope and Targeting"
+  #     - type: list
+  #     - type: heading
+  #       level: 3
+  #       text: "Evaluation Order"
+  #     - type: list
+  #     - type: heading
+  #       level: 3
+  #       text: "Configuration Shape"
+  #     - type: list
+  #     - type: paragraph # "Notes:"
+  #     - type: list
+  #     - type: heading
+  #       level: 4
+  #       text: "Predicate Evaluation"
+  #     - type: paragraph
+  #     - type: heading
+  #       level: 3
+  #       text: "Reporting"
+  #     - type: list
+  #     - type: heading
+  #       level: 3
+  #       text: "Check Identifier"
+  #     - type: list
+  #     - type: heading
+  #       level: 2
+  #       text: "Examples"
+  #     - type: paragraph
+  #     - type: code_block
+  #     - type: paragraph
+  #     - type: code_block
+  #     - type: heading
+  #       level: 2
+  #       text: "Non-Goals"
+  #     - type: list
+  #     - type: heading
+  #       level: 2
+  #       text: "Open Questions"
+  #     - type: list

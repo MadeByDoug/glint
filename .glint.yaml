@@ -1,0 +1,28 @@
+# .glint.yaml
+version: 1
+
+policies:
+  # require-rfc-prefix:
+  #   uses: starlark-policy
+  #   with:
+  #     script: |
+  #       def validate():
+  #         if not text().startswith("RFC: "):
+  #           return "heading must start with 'RFC: '"
+  require-rfc-prefix:
+    uses: prefix  # Use the new built-in Go check
+    with:
+      value: "RFC: " # Provide the parameter it needs
+
+rules:
+  - id: "specification-process"
+    selectors:
+      - type: glob
+        selector: "docs/specs/*-ACTIVE-*.md"
+
+    checks:
+      - id: "section-one-check"
+        uses: "markdown-schema"
+        with:
+          schema: "./docs/specs/spec.schema.yaml"
+          section: "use-case" # Ensure this section has a policy attached to a heading

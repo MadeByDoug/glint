@@ -22,6 +22,12 @@ This page highlights agent-specific expectations.
 
 4. Always follow existing project conventions unless they're insecure, buggy, or fail to follow point #3. Raise your concern for discussion before proceeding.
 
+## Logging and Reporting
+
+1. The (Zerolog) logger will be used when referencing Glint modules and functions (ex: Glint file X line Y was unable to load configuration file).
+
+2. The custom report logger will be used when referencing files linted by Glint (ex: end-users project file X line Y failed a linting check).
+
 ## Validation (run locally before PRs)
 - `go test ./... -race -shuffle=on`
 - `go vet ./...`
